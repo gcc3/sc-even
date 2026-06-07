@@ -80,9 +80,12 @@ async function main() {
   // "generating" (stops listening) until the reply completes.
   function ask(text: string) {
     terminal = `${lastPrompt}${text}\n`;
-    // The web view keeps history: `lastPrompt` is already its tail, so only the
-    // freshly typed input needs to be appended.
-    webLog = (webLog + `${text}\n`).slice(-WEB_LOG_MAX);
+    // Echo the input after the model prompt. The previous reply usually leaves the
+    // prompt at the tail of the log, but not always (e.g. the very first input), so
+    // strip any trailing prompt and re-add `lastPrompt` explicitly — this keeps the
+    // `gpt-5.5>` tag in front of every input without ever duplicating it.
+    const stripped = webLog.replace(/(^|\n)[^\n]*?>[ \t]*$/, "$1");
+    webLog = (stripped + `${lastPrompt}${text}\n`).slice(-WEB_LOG_MAX);
     ui.render(webLog);
     generating = true;
     setStatus("● generating…");
