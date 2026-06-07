@@ -44,7 +44,15 @@ async function main() {
   function renderAll() {
     const preview = draft && !generating;
     const webView = preview ? webLog.replace(/(^|\n)[^\n]*?>[ \t]*$/, "$1") + `${lastPrompt}${draft}` : webLog;
-    const glassesView = preview ? `${lastPrompt}${draft}` : terminal;
+    // On the glasses: show the in-progress draft while typing, the raw stream while
+    // generating, and otherwise the conversation with the waiting prompt (e.g.
+    // "gpt-5.5>") pinned at the end. The prompt is stripped from `terminal` once the CLI
+    // is idle, so re-add it here — this also shows the model name before the first
+    // exchange, when `terminal` is still empty.
+    let glassesView: string;
+    if (preview) glassesView = `${lastPrompt}${draft}`;
+    else if (generating) glassesView = terminal;
+    else glassesView = terminal ? `${terminal}\n${lastPrompt}` : lastPrompt;
     ui.render(webView);
     void display.render({ status: statusText, text: glassesView });
   }
@@ -88,8 +96,11 @@ async function main() {
       const prompt = trailingPrompt(terminal);
       if (prompt) {
         lastPrompt = prompt;
-        terminal = terminal.replace(/\n*[^\n]*?>[ \t]*$/, "");
-        void display.render({ status: statusText, text: terminal });
+        // After a reply (`generating`), keep the exchange and just strip the trailing
+        // prompt. At startup the buffer holds only the CLI banner, so clear it — the
+        // glasses then show a clean "model>" (e.g. "gpt-5.5>") waiting prompt.
+        terminal = generating ? terminal.replace(/\n*[^\n]*?>[ \t]*$/, "") : "";
+        renderAll(); // re-render with the waiting prompt pinned at the end
       }
       // A reply finished: resume listening for the next utterance.
       if (generating) {

@@ -1,11 +1,13 @@
-// Glasses display: a full-screen text container that mirrors the web terminal, plus
-// a small status container pinned to the bottom-right corner.
-// We push the entire output buffer as the main container's content so the device
-// shows a native scroll bar and the user can scroll through it with the glasses
-// controls. The status (e.g. "● listening") lives in its own corner container so it
-// stays put instead of scrolling with the conversation.
-// createStartUpPageContainer may only be called once, so this sets both up and then
-// pushes every later update through textContainerUpgrade.
+// Glasses display: one full-screen text container that mirrors the web terminal.
+// We push the entire output buffer as the container's content so the device shows a
+// native scroll bar and the user can scroll through it with the glasses controls.
+// A status line (e.g. "● listening") is appended at the end so it sits at the bottom.
+//
+// NOTE: this intentionally uses a SINGLE container. A previous attempt to pin the
+// status to the bottom-right via a second container worked in the simulator but left
+// the real glasses blank — the firmware rejects the 2-container startup page, and
+// since createStartUpPageContainer may only be called once there's no fallback. Keep
+// it to one container.
 
 import {
   CreateStartUpPageContainer,
@@ -14,10 +16,8 @@ import {
   type EvenAppBridge,
 } from "@evenrealities/even_hub_sdk";
 
-const MAIN_ID = 1;
-const MAIN_NAME = "caption"; // max 16 chars
-const STATUS_ID = 2;
-const STATUS_NAME = "status"; // max 16 chars
+const CONTAINER_ID = 1;
+const CONTAINER_NAME = "caption"; // max 16 chars
 const SCREEN_WIDTH = 576;
 const SCREEN_HEIGHT = 288;
 
@@ -28,14 +28,6 @@ const BORDER_WIDTH = 1;
 const BORDER_RADIUS = 28;
 const BORDER_COLOR = 5;
 const PADDING = 12;
-
-// The status chip sits in the bottom-right corner, inset from the border. It's sized
-// generously so the longest status ("● transcribing") never clips; the text is
-// left-aligned within it (the device has no text-align option) but the box itself is
-// anchored to the bottom-right so the status reads as a corner indicator.
-const STATUS_WIDTH = 144;
-const STATUS_HEIGHT = 36;
-const STATUS_MARGIN = 10;
 
 export interface Display {
   render(state: { status: string; text: string }): Promise<void>;
@@ -51,47 +43,33 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
     borderColor: BORDER_COLOR,
     borderRadius: BORDER_RADIUS,
     paddingLength: PADDING,
-    containerID: MAIN_ID,
-    containerName: MAIN_NAME,
-    content: "",
+    containerID: CONTAINER_ID,
+    containerName: CONTAINER_NAME,
+    content: "Starting…",
     isEventCapture: 1, // let the container capture the device's scroll controls
   });
 
-  const status = new TextContainerProperty({
-    xPosition: SCREEN_WIDTH - STATUS_WIDTH - STATUS_MARGIN,
-    yPosition: SCREEN_HEIGHT - STATUS_HEIGHT - STATUS_MARGIN,
-    width: STATUS_WIDTH,
-    height: STATUS_HEIGHT,
-    paddingLength: 4,
-    containerID: STATUS_ID,
-    containerName: STATUS_NAME,
-    content: "",
-    isEventCapture: 0,
-  });
-
   const result = await bridge.createStartUpPageContainer(
-    new CreateStartUpPageContainer({ containerTotalNum: 2, textObject: [main, status] }),
+    new CreateStartUpPageContainer({ containerTotalNum: 1, textObject: [main] }),
   );
   if (result !== 0) throw new Error(`createStartUpPageContainer failed: ${result}`);
 
-  function upgrade(containerID: number, containerName: string, content: string) {
-    return bridge.textContainerUpgrade(
-      new TextContainerUpgrade({
-        containerID,
-        containerName,
-        contentOffset: 0,
-        contentLength: content.length,
-        content,
-      }),
-    );
-  }
-
   return {
     async render({ status, text }) {
-      // Main container holds the conversation; the status sits in its own corner box.
-      // Trim trailing newlines so the conversation doesn't leave a dangling blank line
-      // above the corner status.
-      await Promise.all([upgrade(MAIN_ID, MAIN_NAME, text.replace(/\n+$/, "")), upgrade(STATUS_ID, STATUS_NAME, status)]);
+      // Send the whole buffer as the content; the device scrolls it natively. Trim
+      // trailing newlines off the body so the status doesn't get pushed down by a
+      // dangling blank line.
+      const body = text.replace(/\n+$/, "");
+      const content = status ? (body ? `${body}\n${status}` : status) : body;
+      await bridge.textContainerUpgrade(
+        new TextContainerUpgrade({
+          containerID: CONTAINER_ID,
+          containerName: CONTAINER_NAME,
+          contentOffset: 0,
+          contentLength: content.length,
+          content,
+        }),
+      );
     },
   };
 }

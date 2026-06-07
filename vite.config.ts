@@ -30,7 +30,11 @@ function stripAnsi(s: string): string {
 
 // The interactive prompt looks like `gpt-5.5> ` at the very end of a chunk once
 // the CLI is idle and waiting for input. We use it to mark a reply as complete.
-const PROMPT_AT_END = /[\r\n]*[A-Za-z0-9_.\-]+>[ \t]$/;
+// The model name is optional (`*`, not `+`): when no model is set the CLI prints a
+// bare `> ` prompt, and we still need to recognize it — otherwise the prompt is never
+// detected, `ready` never fires, and the startup output stays held in the buffer
+// (leaving the glasses blank until the first reply).
+const PROMPT_AT_END = /[\r\n]*[A-Za-z0-9_.\-]*>[ \t]$/;
 
 function scBridge(): Plugin {
   let child: ChildProcessWithoutNullStreams | null = null;
