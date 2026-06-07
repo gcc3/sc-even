@@ -26,7 +26,16 @@ export interface WebUI {
   askSc(text: string): void;
 }
 
-export async function createWebUI(bridge: EvenAppBridge): Promise<WebUI> {
+/** Optional hooks so callers (e.g. the glasses display) can mirror the AI result. */
+export interface WebUIOptions {
+  onAiChunk?: (text: string) => void; // a piece of the AI reply arrived
+  onAiReady?: () => void; // the AI reply finished
+}
+
+export async function createWebUI(
+  bridge: EvenAppBridge,
+  options: WebUIOptions = {},
+): Promise<WebUI> {
   const root = document.querySelector<HTMLDivElement>("#app");
   if (!root) throw new Error("#app element not found");
 
@@ -104,9 +113,11 @@ export async function createWebUI(bridge: EvenAppBridge): Promise<WebUI> {
       if (!liveAi) liveAi = addBubble("ai", "");
       liveAi.textContent += text;
       chatEl.scrollTop = chatEl.scrollHeight;
+      options.onAiChunk?.(text);
     },
     onReady() {
       liveAi = null;
+      options.onAiReady?.();
     },
     onUnavailable() {
       addBubble("ai", "⚠ sc bridge unavailable — run `npm run dev`.");
