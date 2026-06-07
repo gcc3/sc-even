@@ -33,6 +33,24 @@ async function main() {
   let generating = false;
   let listening = false;
 
+  // The in-progress line typed in the web input box. Mirrored live to both views
+  // (prefixed with the prompt) so the glasses show what's being typed before submit.
+  let draft = "";
+
+  // Render both views from the current buffers, overlaying the live draft line.
+  // While idle and typing, we preview the line exactly as `ask` would echo it:
+  // the model prompt followed by the in-progress text. During generation we leave
+  // the streaming reply alone.
+  function renderAll() {
+    const preview = draft && !generating;
+    const webView = preview
+      ? webLog.replace(/(^|\n)[^\n]*?>[ \t]*$/, "$1") + `${lastPrompt}${draft}`
+      : webLog;
+    const glassesView = preview ? `${lastPrompt}${draft}` : terminal;
+    ui.render(webView);
+    void display.render({ status: statusText, text: glassesView });
+  }
+
   // Append CLI output to both buffers. They're independent: `terminal` is kept tidy
   // for the small glasses display (rendered as-is, no extra cleanup), while `webLog`
   // keeps the full raw scrollback for the web view.
@@ -41,14 +59,13 @@ async function main() {
     // in (it's a whole line and never part of a reply).
     terminal = (terminal + text).replace(/^.*:help.*\n?/gim, "").slice(-TERMINAL_MAX);
     webLog = (webLog + text).slice(-WEB_LOG_MAX);
-    ui.render(webLog);
-    void display.render({ status: statusText, text: terminal });
+    renderAll();
   }
 
   function setStatus(text: string) {
     statusText = text;
     ui.setStatus(text);
-    void display.render({ status: statusText, text: terminal });
+    renderAll();
   }
 
   async function startListening() {
@@ -89,6 +106,7 @@ async function main() {
   // the CLI prompt, and echo the input after it. Then send to `sc` and switch to
   // "generating" (stops listening) until the reply completes.
   function ask(text: string) {
+    draft = ""; // the line is committed now; stop previewing it
     terminal = `${lastPrompt}${text}\n`;
     // Echo the input after the model prompt. The previous reply usually leaves the
     // prompt at the tail of the log, but not always (e.g. the very first input), so
@@ -96,15 +114,18 @@ async function main() {
     // `gpt-5.5>` tag in front of every input without ever duplicating it.
     const stripped = webLog.replace(/(^|\n)[^\n]*?>[ \t]*$/, "$1");
     webLog = (stripped + `${lastPrompt}${text}\n`).slice(-WEB_LOG_MAX);
-    ui.render(webLog);
     generating = true;
-    setStatus("● generating…");
+    setStatus("● generating…"); // re-renders both views
     void stopListening();
     void sc.send(text);
   }
 
   const ui = await createWebUI(bridge, {
     onSubmit: (text) => ask(text),
+    onInput: (text) => {
+      draft = text;
+      renderAll();
+    },
     onLogin: (username, password) => void sc.login(username, password),
     onLanguageChange: (language) => {
       sttLanguage = language;

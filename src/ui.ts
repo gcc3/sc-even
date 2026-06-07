@@ -54,6 +54,8 @@ export interface WebUI {
 export interface WebUIOptions {
   /** User submitted a line in the input box. */
   onSubmit: (text: string) => void;
+  /** Input field text changed (fired on every keystroke for live mirroring). */
+  onInput: (text: string) => void;
   /** User saved Login credentials. */
   onLogin: (username: string, password: string) => void;
   /** Speech language changed (also fired once with the saved value at startup). */
@@ -151,7 +153,12 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     const text = inputField.value.trim();
     if (text) options.onSubmit(text);
     inputField.value = "";
+    options.onInput("");
   });
+
+  // Mirror each keystroke to the terminal/glasses so the in-progress line shows
+  // live (e.g. "gpt-5.5> hello") before it's submitted.
+  inputField.addEventListener("input", () => options.onInput(inputField.value));
 
   // On iOS the on-screen keyboard overlays the page instead of resizing it, so
   // the bottom-pinned input gets hidden behind the keyboard. Shrink the app to
