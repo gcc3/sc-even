@@ -153,6 +153,24 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     inputField.value = "";
   });
 
+  // On iOS the on-screen keyboard overlays the page instead of resizing it, so
+  // the bottom-pinned input gets hidden behind the keyboard. Shrink the app to
+  // the visible (visual viewport) area so the input stays above the keyboard.
+  const appEl = root.querySelector<HTMLDivElement>(".app")!;
+  const viewport = window.visualViewport;
+  if (viewport) {
+    const syncViewport = () => {
+      appEl.style.height = `${viewport.height}px`;
+      termEl.scrollTop = termEl.scrollHeight;
+    };
+    viewport.addEventListener("resize", syncViewport);
+    viewport.addEventListener("scroll", syncViewport);
+    // After the keyboard finishes animating in, make sure the field is in view.
+    inputField.addEventListener("focus", () => {
+      window.setTimeout(() => inputField.scrollIntoView({ block: "end" }), 300);
+    });
+  }
+
   // --- login modal --------------------------------------------------------
   const openLogin = () => {
     usernameInput.value = settings.username;
