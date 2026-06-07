@@ -11,13 +11,17 @@ const SAMPLE_RATE = 16000;
 // Keep the terminal buffer bounded; the glasses only show the tail anyway.
 const TERMINAL_MAX = 4000;
 
+// The web view keeps the full conversation history, so it gets a larger buffer.
+const WEB_LOG_MAX = 100000;
+
 async function main() {
   const bridge = await waitForEvenAppBridge();
   const display = await createDisplay(bridge);
 
-  // One terminal buffer drives both the web view and the glasses, so they show
-  // exactly the same text.
+  // The glasses show only the current exchange (`terminal`), while the web view
+  // keeps the full scrollback (`webLog`). Both are fed from the same output.
   let terminal = "";
+  let webLog = "";
   let statusText = "starting…";
   let sttLanguage = ""; // ISO-639-1 hint from Settings; "" = auto-detect.
   // The CLI prompt (e.g. "gpt-5.5> ") captured from the last reply, so we can keep
@@ -33,7 +37,8 @@ async function main() {
   // position so the user can page back with the Up/Down buttons (see below).
   function emit(text: string) {
     terminal = (terminal + text).slice(-TERMINAL_MAX);
-    ui.render(terminal);
+    webLog = (webLog + text).slice(-WEB_LOG_MAX);
+    ui.render(webLog);
     void display.render({ status: statusText, text: terminal });
   }
 
@@ -75,7 +80,10 @@ async function main() {
   // "generating" (stops listening) until the reply completes.
   function ask(text: string) {
     terminal = `${lastPrompt}${text}\n`;
-    ui.render(terminal);
+    // The web view keeps history: `lastPrompt` is already its tail, so only the
+    // freshly typed input needs to be appended.
+    webLog = (webLog + `${text}\n`).slice(-WEB_LOG_MAX);
+    ui.render(webLog);
     generating = true;
     setStatus("● generating…");
     void stopListening();

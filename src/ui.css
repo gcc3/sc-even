@@ -43,6 +43,12 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  /* Allow scrolling/panning but disable pinch-zoom on touch devices. */
+  touch-action: pan-x pan-y;
+}
+
 body {
   margin: 0;
   font:

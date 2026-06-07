@@ -171,6 +171,20 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     });
   }
 
+  // iOS Safari ignores `user-scalable=no`, so cancel its pinch-zoom gesture
+  // events directly. Single-finger scrolling is untouched.
+  for (const evt of ["gesturestart", "gesturechange", "gestureend"]) {
+    document.addEventListener(evt, (e) => e.preventDefault(), { passive: false });
+  }
+  // Block multi-touch pinch on browsers without gesture events.
+  document.addEventListener(
+    "touchmove",
+    (e) => {
+      if (e.touches.length > 1) e.preventDefault();
+    },
+    { passive: false },
+  );
+
   // --- login modal --------------------------------------------------------
   const openLogin = () => {
     usernameInput.value = settings.username;
