@@ -17,7 +17,7 @@ export interface Settings {
   language: string;
   /** UI theme: "light" | "dark" | "terminal". */
   theme: string;
-  /** Base URL of the sc-bridge server (server.mjs). "" = relative (dev server). */
+  /** Base URL of the sc-bridge server (serve.mjs). "" = relative (dev server). */
   scServerBaseUrl: string;
   /** Whether to remember the username/password (the Login "Save" box). */
   loginSave: boolean;

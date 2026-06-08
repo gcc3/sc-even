@@ -4,7 +4,7 @@
 // (simple-ai-chat) CLI; this client just streams its output and posts input back.
 // Two backends speak this protocol:
 //   - the dev-only Vite plugin in vite.config.ts (relative paths, same origin)
-//   - the standalone server.mjs / serve.sh (an absolute URL, set in the published
+//   - the standalone serve.mjs / serve.sh (an absolute URL, set in the published
 //     app via Settings → SC server URL)
 //
 // `connect(baseUrl)` (re)opens the stream against a server:

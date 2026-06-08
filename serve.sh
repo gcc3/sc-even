@@ -3,9 +3,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-# Serves the sc-bridge backend (server.mjs): runs the `sc` (simple-ai-chat) CLI
+# Serves the sc-bridge backend (serve.mjs): runs the `sc` (simple-ai-chat) CLI
 # behind HTTP/SSE so the glasses app can reach it. One sc process per session —
-# see server.mjs for the env vars it accepts.
+# see serve.mjs for the env vars it accepts.
 #
 # Usage:
 #   ./serve.sh                 # local only:  http://localhost:8787
@@ -43,12 +43,12 @@ echo "==> Session storage: $SC_TMP/sc-home-*/.simple   (per session, removed on 
 # Local-only: no tunnel, just run the server in the foreground.
 if [ -z "$TUNNEL" ]; then
   echo "==> sc-bridge on http://localhost:$PORT  (set TUNNEL=1 for a public URL)"
-  exec node server.mjs
+  exec node serve.mjs
 fi
 
 # Public mode: run the server in the background and start a tunnel alongside it.
 echo "==> Starting sc-bridge on port $PORT"
-node server.mjs &
+node serve.mjs &
 SERVER_PID=$!
 
 TUNNEL_LOG="$(mktemp)"
