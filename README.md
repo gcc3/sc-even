@@ -6,7 +6,6 @@ simple-ai-even
 Simple AI for Even G2 smartglasses.
 
 
-
 Publish
 -------
 
@@ -15,3 +14,19 @@ Run `./package.sh`
 
 Update the generated `.ehpk` file to  
 [Even G2 Protal](https://hub.evenrealities.com/)  
+
+
+sc-bridge API
+-------------
+
+`GET /healthz`  
+Health check. Returns `ok`.
+
+`GET /api/sc/stream?session=<id>`  
+SSE stream of the CLI's output for the given session. Emits `chunk` events with text and a `ready` event when the CLI is idle.
+
+`POST /api/sc/send`  
+Send a message to the CLI. Body: `{ session, text }`.
+
+`POST /api/sc/login`  
+Log in to the sc account. Body: `{ session, username, password }`.

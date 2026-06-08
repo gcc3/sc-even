@@ -22,6 +22,21 @@ export function tailRows(text: string, maxRows: number, charsPerLine: number): s
   return kept.join("\n");
 }
 
+// Break text into the visual rows the glasses draw: hard newlines split rows, and a
+// line longer than `charsPerLine` wraps onto consecutive rows. Used to page through the
+// saved session transcript a screenful at a time (see the glasses scrollback).
+export function visualRows(text: string, charsPerLine: number): string[] {
+  const rows: string[] = [];
+  for (const line of text.split("\n")) {
+    if (line.length <= charsPerLine) {
+      rows.push(line);
+      continue;
+    }
+    for (let i = 0; i < line.length; i += charsPerLine) rows.push(line.slice(i, i + charsPerLine));
+  }
+  return rows;
+}
+
 // Extract the trailing CLI prompt (e.g. "gpt-5.5> ") from the output, if any.
 export function trailingPrompt(text: string): string {
   const m = text.match(/(?:^|\n)([^\n]*?>[ \t]*)$/);

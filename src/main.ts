@@ -1,4 +1,4 @@
-import { waitForEvenAppBridge } from "@evenrealities/even_hub_sdk";
+import { waitForEvenAppBridge, OsEventTypeList } from "@evenrealities/even_hub_sdk";
 import { createDisplay } from "./glassesui/glasses";
 import { createWebUI, type WebUI } from "./webui/webui";
 import { connectSc } from "./utils/scUtils";
@@ -63,7 +63,9 @@ async function main() {
     // The glasses always render the last screenful, so the streaming reply stays in
     // view while generating and the tail — ending in the waiting "gpt-5.5>" prompt —
     // stays pinned to the bottom instead of jumping back to the top.
-    void display.render({ status: statusText, text: glassesView });
+    // `webLog` is the full session transcript (cleared only on reset); hand it over as
+    // the scrollback the touch bar pages through while `glassesView` is the live view.
+    void display.render({ status: statusText, text: glassesView, history: webLog });
   }
 
   // Append CLI output to both buffers. They're independent: `terminal` is kept tidy
@@ -134,6 +136,7 @@ async function main() {
   // "generating" (stops listening) until the reply completes.
   function ask(text: string) {
     draft = ""; // the line is committed now; stop previewing it
+    display.followLive(); // a new exchange pulls the glasses back to the live view
     terminal = `${lastPrompt}${text}\n`;
     // Echo the input after the model prompt. The previous reply usually leaves the
     // prompt at the tail of the log, but not always (e.g. the very first input), so
@@ -155,6 +158,7 @@ async function main() {
     draft = "";
     terminal = "";
     webLog = "";
+    display.followLive(); // drop any scrollback so the cleared live view shows
     renderAll(); // clear both views immediately, before the CLI responds
     void sc.send(":reset");
   }
@@ -217,9 +221,22 @@ async function main() {
     setStatus("● listening");
   }
 
-  // Audio arrives as audioEvent PCM bytes. Ignore it while generating so the reply
-  // isn't interrupted by stray speech. (Scrolling is handled natively by the device.)
+  // Events from the glasses. The caption container captures touch-bar scrolls
+  // (isEventCapture), which arrive as SCROLL_TOP/BOTTOM and page through the saved
+  // session transcript: up shows the previous (older) view, down the next (newer) one,
+  // and scrolling past the bottom resumes following the live output. Audio arrives as
+  // audioEvent PCM bytes; ignore it while generating so the reply isn't interrupted by
+  // stray speech.
   bridge.onEvenHubEvent((event) => {
+    const eventType = event.textEvent?.eventType ?? event.listEvent?.eventType;
+    if (eventType === OsEventTypeList.SCROLL_TOP_EVENT) {
+      void display.showPreviousView();
+      return;
+    }
+    if (eventType === OsEventTypeList.SCROLL_BOTTOM_EVENT) {
+      void display.showNextView();
+      return;
+    }
     if (!listening) return;
     const pcm = event.audioEvent?.audioPcm;
     if (pcm && pcm.byteLength > 0) segmenter.push(pcm);
