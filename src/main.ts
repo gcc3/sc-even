@@ -166,6 +166,10 @@ async function main() {
       // Recover from the no-key prompt once a key is entered in Settings.
       if (apiKey) setStatus("● listening");
     },
+    // (Re)connect the sc bridge to the configured server. Fired once at startup
+    // with the saved URL ("" = the dev server's relative bridge) and again
+    // whenever it changes in Settings.
+    onScServerChange: (baseUrl) => sc.connect(baseUrl),
   });
 
   if (!hasApiKey()) {
