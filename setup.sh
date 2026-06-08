@@ -17,14 +17,6 @@ if [ ! -f node_modules/@rolldown/pluginutils/dist/index.mjs ]; then
   npm ci
 fi
 
-echo "==> Checking .env"
-if [ ! -f .env ]; then
-  cp .env.example .env
-  echo "    Created .env from .env.example — open it and set VITE_OPENAI_API_KEY"
-else
-  echo "    .env already exists, leaving it untouched"
-fi
-
 echo "==> Making helper scripts executable"
 chmod +x start.sh setup.sh serve.sh 2>/dev/null || true
 
