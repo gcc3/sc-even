@@ -57,13 +57,16 @@ const sessions = new Map();
 function getSession(id) {
   let s = sessions.get(id);
   if (!s) {
+    // Isolated HOME so each session's sc keeps its own ~/.simple (cookie +
+    // settings) instead of clobbering a shared one. Named "sc-home-<unix ms>-
+    // <random>": the timestamp is human-readable, and mkdtemp's random suffix
+    // guarantees a unique dir even for sessions created in the same millisecond.
+    const home = mkdtempSync(join(tmpdir(), `sc-home-${Date.now()}-`));
     s = {
       child: null,
       clients: new Set(),
       buf: "",
-      // Isolated HOME so each session's sc keeps its own ~/.simple (cookie +
-      // settings) instead of clobbering a shared one.
-      home: mkdtempSync(join(tmpdir(), "sc-home-")),
+      home,
       killTimer: null,
     };
     sessions.set(id, s);
