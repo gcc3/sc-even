@@ -1,9 +1,9 @@
 import { waitForEvenAppBridge } from "@evenrealities/even_hub_sdk";
 import { createDisplay } from "./glasses";
 import { createWebUI } from "./ui";
-import { connectSc } from "./sc";
-import { SpeechSegmenter } from "./segmenter";
-import { hasApiKey, transcribe } from "./transcribe";
+import { connectSc } from "./utils/scUtils";
+import { SpeechSegmenter } from "./utils/speechUtils";
+import { hasApiKey, transcribe } from "./utils/transcribeUtils";
 import { trailingPrompt, stripTrailingPrompt } from "./utils/textUtils";
 
 // The glasses mic streams single-channel 16 kHz / 16-bit PCM.
