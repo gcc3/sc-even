@@ -59,8 +59,10 @@ export interface Display {
   // Drop any scrollback and follow the live output again, without rendering. The
   // next `render` (or `showNextView` past the bottom) draws the live view.
   followLive(): void;
-  // Show or hide the blinking block cursor at the end of the live view.
+  // Show or hide the cursor at the end of the live view.
   setCursor(show: boolean): void;
+  // Enable or disable cursor blinking (false = static block).
+  setCursorBlink(blink: boolean): void;
 }
 
 export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
@@ -94,9 +96,10 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
   // `null` = following the live output.
   let frozen: string | null = null;
 
-  // Blinking cursor state: enabled when idle, toggled every 500 ms by an interval.
+  // Cursor state: enabled when idle; blink toggles via interval when cursorBlink is true.
   let cursorEnabled = false;
   let cursorVisible = false;
+  let cursorBlink = false;
   let cursorIntervalId = 0;
 
   // Render serializer: while a SDK send is in flight, incoming render() calls just
@@ -207,17 +210,30 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
     setCursor(show: boolean) {
       if (show === cursorEnabled) return;
       cursorEnabled = show;
-      if (show) {
-        cursorVisible = true;
-        cursorIntervalId = window.setInterval(() => {
-          cursorVisible = !cursorVisible;
-          if (frozen === null) void scheduleLiveRender();
-        }, 500);
-      } else {
-        window.clearInterval(cursorIntervalId);
-        cursorVisible = false;
-        if (frozen === null) void renderLive();
-      }
+      applyCursor();
+    },
+
+    setCursorBlink(blink: boolean) {
+      if (blink === cursorBlink) return;
+      cursorBlink = blink;
+      if (cursorEnabled) applyCursor();
     },
   };
+
+  function applyCursor() {
+    window.clearInterval(cursorIntervalId);
+    cursorIntervalId = 0;
+    if (!cursorEnabled) {
+      cursorVisible = false;
+    } else if (cursorBlink) {
+      cursorVisible = true;
+      cursorIntervalId = window.setInterval(() => {
+        cursorVisible = !cursorVisible;
+        if (frozen === null) void scheduleLiveRender();
+      }, 500);
+    } else {
+      cursorVisible = true;
+    }
+    if (frozen === null) void scheduleLiveRender();
+  }
 }

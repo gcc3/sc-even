@@ -112,8 +112,10 @@ export interface WebUI {
   setStatus(text: string): void;
   /** Replace the terminal output with the given text (kept in sync with the glasses). */
   render(text: string): void;
-  /** Show or hide the blinking cursor at the end of the terminal output. */
+  /** Show or hide the cursor at the end of the terminal output. */
   setCursor(show: boolean): void;
+  /** Enable or disable cursor blinking (false = static block). */
+  setCursorBlink(blink: boolean): void;
   /** Briefly show a transient message (e.g. a glasses tap arrived). */
   toast(text: string): void;
 }
@@ -131,6 +133,8 @@ export interface WebUIOptions {
   onLanguageChange: (language: string) => void;
   /** OpenAI API key changed (also fired once with the saved value at startup). */
   onApiKeyChange: (apiKey: string) => void;
+  /** Cursor blink setting changed (also fired once with the saved value at startup). */
+  onCursorBlinkChange: (blink: boolean) => void;
 }
 
 export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions): Promise<WebUI> {
@@ -195,6 +199,11 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
           <span class="field__label">Theme</span>
           <div data-theme></div>
         </div>
+        <label class="switch">
+          <span>Cursor blink</span>
+          <input type="checkbox" data-cursor-blink />
+          <span class="switch__track"><span class="switch__thumb"></span></span>
+        </label>
         <div class="modal__actions">
           <span class="modal__saved" data-saved>Saved ✓</span>
           <button class="btn" data-close-settings>Cancel</button>
@@ -224,12 +233,15 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   settingsModal.querySelector<HTMLDivElement>("[data-language]")!.appendChild(languageSelect.el);
   settingsModal.querySelector<HTMLDivElement>("[data-theme]")!.appendChild(themeSelect.el);
   const savedNote = settingsModal.querySelector<HTMLSpanElement>("[data-saved]")!;
+  const cursorBlinkCheckbox = settingsModal.querySelector<HTMLInputElement>("[data-cursor-blink]")!;
 
   // Hold the persisted settings so saving one modal doesn't clobber the other's fields.
   let settings = await loadSettings(bridge);
   options.onLanguageChange(settings.language);
   options.onApiKeyChange(settings.apiKey);
   applyTheme(settings.theme);
+  termEl.classList.toggle("term--cursor-blink", settings.cursorBlink);
+  options.onCursorBlinkChange(settings.cursorBlink);
   // Auto-login at startup if saved credentials exist.
   if (settings.username && settings.password) {
     options.onLogin(settings.username, settings.password);
@@ -318,6 +330,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     apiKeyInput.value = settings.apiKey;
     languageSelect.value = settings.language;
     themeSelect.value = settings.theme;
+    cursorBlinkCheckbox.checked = settings.cursorBlink;
     savedNote.classList.remove("modal__saved--show");
     settingsModal.classList.add("modal--open");
   };
@@ -336,11 +349,14 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     const apiKey = apiKeyInput.value.trim();
     const language = languageSelect.value;
     const theme = themeSelect.value;
-    settings = { ...settings, apiKey, language, theme };
+    const cursorBlink = cursorBlinkCheckbox.checked;
+    settings = { ...settings, apiKey, language, theme, cursorBlink };
     await saveSettings(bridge, settings);
     options.onApiKeyChange(apiKey);
     options.onLanguageChange(language);
     applyTheme(theme);
+    termEl.classList.toggle("term--cursor-blink", cursorBlink);
+    options.onCursorBlinkChange(cursorBlink);
     savedNote.classList.add("modal__saved--show");
     setTimeout(closeSettings, 600);
   });
@@ -355,6 +371,9 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     },
     setCursor(show: boolean) {
       termEl.classList.toggle("term--cursor", show);
+    },
+    setCursorBlink(blink: boolean) {
+      termEl.classList.toggle("term--cursor-blink", blink);
     },
     toast(text: string) {
       toastEl.textContent = text;

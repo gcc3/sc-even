@@ -19,6 +19,8 @@ export interface Settings {
   theme: string;
   /** Whether to remember the username/password (the Login "Save" box). */
   loginSave: boolean;
+  /** Whether the idle cursor blinks; false = static block. */
+  cursorBlink: boolean;
 }
 
 const EMPTY: Settings = {
@@ -28,6 +30,7 @@ const EMPTY: Settings = {
   language: "",
   theme: "light",
   loginSave: true,
+  cursorBlink: false,
 };
 
 // The bridge's storage calls can hang on the real device (they resolve on the
@@ -75,6 +78,7 @@ export async function loadSettings(bridge: EvenAppBridge): Promise<Settings> {
       language: parsed.language ?? "",
       theme: parsed.theme ?? "light",
       loginSave: parsed.loginSave ?? true,
+      cursorBlink: parsed.cursorBlink ?? false,
     };
   } catch {
     return { ...EMPTY };

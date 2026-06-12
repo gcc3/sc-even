@@ -251,6 +251,54 @@ body {
   accent-color: var(--muted);
 }
 
+.switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch__track {
+  flex-shrink: 0;
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--border);
+  transition: background 0.2s;
+}
+
+.switch input:checked + .switch__track {
+  background: var(--accent);
+}
+
+.switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.switch input:checked + .switch__track .switch__thumb {
+  transform: translateX(18px);
+}
+
 .field__input {
   /* One fixed height for text inputs AND selects so they line up. Vertical
      centering is automatic for single-line inputs/selects, so we only pad
@@ -387,15 +435,19 @@ body {
   color: var(--muted);
 }
 
-/* Blinking block cursor appended to the terminal output when idle. */
+/* Block cursor appended to the terminal output when idle. Static by default;
+   add .term--cursor-blink to animate. */
 @keyframes blink-cursor {
   50% { opacity: 0; }
 }
 
 .term--cursor::after {
   content: '█';
-  animation: blink-cursor 1s step-end infinite;
   color: var(--accent);
+}
+
+.term--cursor.term--cursor-blink::after {
+  animation: blink-cursor 1s step-end infinite;
 }
 
 /* Transient notification, bottom-center. Shown e.g. when a glasses tap arrives. */

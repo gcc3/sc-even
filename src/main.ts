@@ -208,6 +208,9 @@ async function main() {
       if (apiKey) void startListening();
       else void stopListening();
     },
+    onCursorBlinkChange: (blink) => {
+      display.setCursorBlink(blink);
+    },
   });
 
   if (!hasApiKey()) {
