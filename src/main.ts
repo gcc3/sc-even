@@ -57,7 +57,7 @@ async function main() {
     // is idle, so re-add it here — this also shows the model name before the first
     // exchange, when `terminal` is still empty.
     let glassesView: string;
-    if (preview) glassesView = `${lastPrompt}${draft}`;
+    if (preview) glassesView = terminal ? `${terminal}\n${lastPrompt}${draft}` : `${lastPrompt}${draft}`;
     else if (generating) glassesView = terminal;
     else glassesView = terminal ? `${terminal}\n${lastPrompt}` : lastPrompt;
     const cursorOn = !generating;
@@ -188,8 +188,9 @@ async function main() {
     onInput: (text) => {
       draft = text;
       // Typing takes over from the mic: stop listening on the first keystroke so a
-      // typed message isn't competing with captured speech.
+      // typed message isn't competing with captured speech. Resume when cleared.
       if (text && listening) void stopListening();
+      else if (!text && !listening) void startListening();
       renderAll();
     },
     // Manual login (button) goes through immediately — the CLI is already idle by
@@ -234,6 +235,7 @@ async function main() {
   });
 
   async function handleSegment(pcm: Uint8Array, seq: number) {
+    if (!listening) return;
     setStatus("● transcribing");
     try {
       const text = await transcribe(pcm, SAMPLE_RATE, sttLanguage || undefined);
@@ -245,8 +247,8 @@ async function main() {
     } catch (err) {
       console.error("transcribe error:", err);
     }
-    // Nothing usable — keep listening.
-    setStatus("● listening");
+    // Nothing usable — keep listening (only if still in listening mode).
+    if (listening) setStatus("● listening");
   }
 
   // Ask the host to show its exit confirmation layer (mode 1). The user decides whether
