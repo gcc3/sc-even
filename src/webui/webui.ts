@@ -185,7 +185,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
       </header>
       <pre class="term" data-term></pre>
       <input class="hidden-input" data-input-field type="text"
-             autocomplete="off" enterkeyhint="send" />
+             autocomplete="off" enterkeyhint="enter" />
     </div>
 
     <div class="toast" data-toast></div>
