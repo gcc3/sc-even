@@ -59,6 +59,9 @@ async function main() {
     if (preview) glassesView = `${lastPrompt}${draft}`;
     else if (generating) glassesView = terminal;
     else glassesView = terminal ? `${terminal}\n${lastPrompt}` : lastPrompt;
+    const cursorOn = !generating;
+    ui?.setCursor(cursorOn);
+    display.setCursor(cursorOn);
     ui?.render(webView);
     // The glasses always render the last screenful, so the streaming reply stays in
     // view while generating and the tail — ending in the waiting "gpt-5.5>" prompt —

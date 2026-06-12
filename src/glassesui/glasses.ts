@@ -59,6 +59,8 @@ export interface Display {
   // Drop any scrollback and follow the live output again, without rendering. The
   // next `render` (or `showNextView` past the bottom) draws the live view.
   followLive(): void;
+  // Show or hide the blinking block cursor at the end of the live view.
+  setCursor(show: boolean): void;
 }
 
 export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
@@ -92,6 +94,11 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
   // `null` = following the live output.
   let frozen: string | null = null;
 
+  // Blinking cursor state: enabled when idle, toggled every 500 ms by an interval.
+  let cursorEnabled = false;
+  let cursorVisible = false;
+  let cursorIntervalId = 0;
+
   // One screenful for history paging. We always reserve a row for the position
   // indicator, matching the live view's reserved status row.
   const VIEW_ROWS = SCREEN_ROWS - 1;
@@ -117,6 +124,7 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
     // every render (not just while generating) keeps the newest text in view and
     // the scroll bar gone. Reserve a row for the status line appended below.
     body = tailRows(body, SCREEN_ROWS - (last.status ? 1 : 0), CHARS_PER_LINE);
+    if (cursorEnabled && cursorVisible) body += "▌";
     const content = last.status ? (body ? `${body}\n${last.status}` : last.status) : body;
     await send(content);
   }
@@ -173,6 +181,22 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
     followLive() {
       frozen = null;
       offset = 0;
+    },
+
+    setCursor(show: boolean) {
+      if (show === cursorEnabled) return;
+      cursorEnabled = show;
+      if (show) {
+        cursorVisible = true;
+        cursorIntervalId = window.setInterval(() => {
+          cursorVisible = !cursorVisible;
+          if (frozen === null) void renderLive();
+        }, 500);
+      } else {
+        window.clearInterval(cursorIntervalId);
+        cursorVisible = false;
+        if (frozen === null) void renderLive();
+      }
     },
   };
 }

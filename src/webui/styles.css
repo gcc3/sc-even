@@ -420,6 +420,17 @@ body {
   color: var(--muted);
 }
 
+/* Blinking block cursor appended to the terminal output when idle. */
+@keyframes blink-cursor {
+  50% { opacity: 0; }
+}
+
+.term--cursor::after {
+  content: '█';
+  animation: blink-cursor 1s step-end infinite;
+  color: var(--accent);
+}
+
 /* Transient notification, bottom-center. Shown e.g. when a glasses tap arrives. */
 .toast {
   position: fixed;

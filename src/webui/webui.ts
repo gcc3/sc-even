@@ -112,6 +112,8 @@ export interface WebUI {
   setStatus(text: string): void;
   /** Replace the terminal output with the given text (kept in sync with the glasses). */
   render(text: string): void;
+  /** Show or hide the blinking cursor at the end of the terminal output. */
+  setCursor(show: boolean): void;
   /** Briefly show a transient message (e.g. a glasses tap arrived). */
   toast(text: string): void;
 }
@@ -355,6 +357,9 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     render(text: string) {
       termEl.textContent = text;
       termEl.scrollTop = termEl.scrollHeight;
+    },
+    setCursor(show: boolean) {
+      termEl.classList.toggle("term--cursor", show);
     },
     toast(text: string) {
       toastEl.textContent = text;
