@@ -40,3 +40,5 @@ echo
 echo "Done: $OUTPUT"
 echo "Next: upload it to the Even Hub dev portal to publish."
 echo "  (Run 'evenhub login' first if you haven't.)"
+echo
+echo "Upload to \`https://hub.evenrealities.com/hub/${PACKAGE_ID}\`"
