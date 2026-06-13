@@ -111,6 +111,11 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
   let liveRenderInFlight = false;
   let liveRenderPending = false;
 
+  // The glasses arm fires two SCROLL events per physical gesture (start + end of tilt).
+  // Ignore a second scroll event arriving within this window to avoid double page jumps.
+  const SCROLL_COOLDOWN_MS = 400;
+  let lastScrollTime = 0;
+
   // One screenful for history paging. We always reserve a row for the position
   // indicator, matching the live view's reserved status row.
   const VIEW_ROWS = SCREEN_ROWS - 1;
@@ -177,6 +182,9 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
     },
 
     async showPreviousView() {
+      const now = Date.now();
+      if (now - lastScrollTime < SCROLL_COOLDOWN_MS) return;
+      lastScrollTime = now;
       if (frozen === null) {
         const snapshot = last.history.replace(/\n+$/, "");
         // Nothing above the current screen — the whole session already fits.
@@ -189,6 +197,9 @@ export async function createDisplay(bridge: EvenAppBridge): Promise<Display> {
     },
 
     async showNextView() {
+      const now = Date.now();
+      if (now - lastScrollTime < SCROLL_COOLDOWN_MS) return;
+      lastScrollTime = now;
       if (frozen === null) return; // already following live
       pageIndex -= 1;
       if (pageIndex <= 0) {
