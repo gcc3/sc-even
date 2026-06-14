@@ -105,13 +105,16 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   });
 
   options.onLanguageChange(settingsRef.current.speechLanguage);
-  if (settingsRef.current.language) options.onSubmit(`:lang use ${settingsRef.current.language}`);
+  if (settingsRef.current.language) {
+    options.onSubmit(`:lang use ${settingsRef.current.language}`);
+  }
   options.onApiKeyChange(settingsRef.current.apiKey);
   applyTheme(settingsRef.current.theme);
   termEl.classList.toggle("term--cursor-blink", settingsRef.current.cursorBlink);
   options.onCursorBlinkChange(settingsRef.current.cursorBlink);
   settingsModal.setApiKeyDependentState(!!settingsRef.current.apiKey);
   options.onTranscriptionChange(settingsRef.current.transcription);
+
   // Auto-login at startup if saved credentials exist.
   if (settingsRef.current.username && settingsRef.current.password) {
     options.onLogin(settingsRef.current.username, settingsRef.current.password);

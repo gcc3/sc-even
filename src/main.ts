@@ -1,7 +1,7 @@
 import { waitForEvenAppBridge, OsEventTypeList, EventSourceType } from "@evenrealities/even_hub_sdk";
 import { createDisplay } from "./glassesui/glasses";
 import { createWebUI, type WebUI } from "./webui/webui";
-import { connectSc } from "./utils/scUtils";
+import { connectSc } from "./services/scService";
 import { SpeechSegmenter } from "./utils/speechUtils";
 import { hasApiKey, setApiKey, transcribe } from "./utils/transcribeUtils";
 import { trailingPrompt, stripTrailingPrompt } from "./utils/textUtils";
