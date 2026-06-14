@@ -3,8 +3,7 @@
 const BYTES_PER_SAMPLE = 2; // 16-bit
 const NUM_CHANNELS = 1; // mono
 
-// Root-mean-square amplitude of a PCM buffer (on the 0..32767 scale), used to tell
-// speech from silence.
+// Root-mean-square amplitude of a PCM buffer (on the 0..32767 scale).
 export function rms(bytes: Uint8Array): number {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const count = Math.floor(bytes.byteLength / BYTES_PER_SAMPLE);
@@ -15,6 +14,41 @@ export function rms(bytes: Uint8Array): number {
     sumSquares += sample * sample;
   }
   return Math.sqrt(sumSquares / count);
+}
+
+// How often the signal crosses zero, expressed as crossings per second.
+// Speech sits in a characteristic ZCR band; very low ZCR = impulse noise,
+// very high ZCR = white noise / interference.
+function zeroCrossingRate(bytes: Uint8Array, sampleRate: number): number {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const count = Math.floor(bytes.byteLength / BYTES_PER_SAMPLE);
+  if (count < 2) return 0;
+  let crossings = 0;
+  let prev = view.getInt16(0, true);
+  for (let i = 1; i < count; i++) {
+    const curr = view.getInt16(i * BYTES_PER_SAMPLE, true);
+    if ((prev >= 0) !== (curr >= 0)) crossings++;
+    prev = curr;
+  }
+  return (crossings / count) * sampleRate;
+}
+
+// Minimum RMS to consider the buffer potentially containing speech.
+// Ambient noise on the 0–32767 scale is typically <200; whispered speech >400.
+const SPEECH_RMS_MIN = 300;
+
+// ZCR band for speech (crossings/second).
+// Voiced speech: ~100–500/s. Below → DC/impulse noise. Above → white noise.
+const SPEECH_ZCR_MIN = 50;
+const SPEECH_ZCR_MAX = 3000;
+
+// Returns true when the buffer is likely to contain speech.
+// Combines energy (RMS) and zero-crossing rate to filter out silence,
+// impulse noise, and white noise/interference — all without an ML model.
+export function hasSpeech(bytes: Uint8Array, sampleRate: number): boolean {
+  if (rms(bytes) < SPEECH_RMS_MIN) return false;
+  const zcr = zeroCrossingRate(bytes, sampleRate);
+  return zcr >= SPEECH_ZCR_MIN && zcr <= SPEECH_ZCR_MAX;
 }
 
 // Concatenate PCM chunks into a single buffer of the given total length.

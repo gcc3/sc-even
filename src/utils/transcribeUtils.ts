@@ -4,7 +4,7 @@
 // endpoint. This is request/response (not a live socket), so expect a short lag
 // after each pause while the segment is transcribed.
 
-import { pcm16ToWav } from "./audioUtils";
+import { pcm16ToWav, hasSpeech } from "./audioUtils";
 
 const ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 
@@ -35,6 +35,7 @@ export function hasApiKey(): boolean {
 // means auto-detect.
 export async function transcribe(pcm: Uint8Array, sampleRate: number, language?: string): Promise<string> {
   if (!apiKey) throw new Error("OpenAI API key is not set");
+  if (!hasSpeech(pcm, sampleRate)) return "";
 
   const lang = language || "";
   const form = new FormData();
