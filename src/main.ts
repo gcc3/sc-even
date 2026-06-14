@@ -111,6 +111,7 @@ async function main() {
 
   async function stopListening() {
     listening = false;
+    pendingSegments.clear(); // discard any accumulated voice results
     setStatus(""); // clear the listening indicator while the mic is off
     await bridge.audioControl(false);
   }
@@ -281,34 +282,55 @@ async function main() {
     ui?.toast(msg("noApiKey"), 5000);
   }
 
-  // Each closed segment is sent off for transcription. We tag segments so a slow
-  // response can't append out of order.
+  // Accumulate transcribed segments and submit them together once all in-flight
+  // transcriptions for a single utterance are done.
   let nextSeq = 0;
-  let lastShownSeq = -1;
+  let pendingCount = 0;
+  const pendingSegments = new Map<number, string>(); // seq → transcribed text
 
   const segmenter = new SpeechSegmenter({
     sampleRate: SAMPLE_RATE,
     onSegment: (pcm) => {
       const seq = nextSeq++;
+      pendingCount++;
       void handleSegment(pcm, seq);
     },
   });
 
   async function handleSegment(pcm: Uint8Array, seq: number) {
-    if (!listening) return;
+    if (!listening) {
+      pendingCount--;
+      return;
+    }
+
     setStatus("● transcribing");
     try {
       const text = await transcribe(pcm, SAMPLE_RATE, sttLanguage || undefined);
-      if (text && seq > lastShownSeq) {
-        lastShownSeq = seq;
-        ask(text); // echo the transcript and forward it to sc (flips to "generating")
+      if (!listening) {
+        pendingCount--;
+        if (pendingCount === 0) pendingSegments.clear();
         return;
       }
+      if (text) pendingSegments.set(seq, text);
     } catch (err) {
       console.error("transcribe error:", err);
     }
-    // Nothing usable — keep listening (only if still in listening mode).
-    if (listening) setStatus("● listening");
+
+    pendingCount--;
+    if (pendingCount > 0) return; // more segments still in flight — wait
+    // All segments done: submit combined text in utterance order.
+    if (pendingSegments.size > 0) {
+      const combined = [...pendingSegments.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([, t]) => t)
+        .join(" ");
+      pendingSegments.clear();
+      ask(combined);
+      return;
+    }
+    if (listening) {
+      setStatus("● listening");
+    }
   }
 
   // Ask the host to show its exit confirmation layer (mode 1). The user decides whether
