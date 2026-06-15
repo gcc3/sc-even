@@ -13,6 +13,8 @@ const files = [
   [join(nm, "@ricky0123/vad-web/dist/silero_vad_v5.onnx"), "silero_vad_v5.onnx"],
   [join(nm, "onnxruntime-web/dist/ort-wasm-simd-threaded.wasm"), "ort-wasm-simd-threaded.wasm"],
   [join(nm, "onnxruntime-web/dist/ort-wasm-simd-threaded.mjs"), "ort-wasm-simd-threaded.mjs"],
+  [join(nm, "onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm"), "ort-wasm-simd-threaded.asyncify.wasm"],
+  [join(nm, "onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs"), "ort-wasm-simd-threaded.asyncify.mjs"],
 ];
 
 for (const [src, filename] of files) {
