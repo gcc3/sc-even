@@ -78,13 +78,13 @@ async function main() {
     }
 
     if (!segmenterReady) {
-      setStatus("● loading VAD…");
+      setStatus("● loading VAD");
       try {
         await segmenter.init();
         segmenterReady = true;
       } catch (err) {
         console.error("Segmenter init failed:", err);
-        setStatus("⚠ VAD init failed");
+        setStatus("● VAD init failed");
         return;
       }
       if (!transcriptionEnabled) return; // disabled while loading
@@ -94,7 +94,7 @@ async function main() {
     if (!transcriptionEnabled) return; // disabled while waiting for audioControl
 
     listening = isMicReady;
-    setStatus(isMicReady ? "● listening" : "⚠ mic failed");
+    setStatus(isMicReady ? "● listening" : "● mic failed");
   }
 
   async function stopListening() {
