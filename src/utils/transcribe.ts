@@ -1,46 +1,29 @@
-// OpenAI Whisper (REST) transcriber.
+// OpenAI Whisper (REST) transcriber — proxied through the sc-bridge backend.
 //
-// Buffers of glasses PCM are wrapped as WAV and POSTed to the audio transcriptions
-// endpoint. This is request/response (not a live socket), so expect a short lag
-// after each pause while the segment is transcribed.
+// The client sends a base64-encoded WAV to the server's /api/transcribe endpoint,
+// which holds the OpenAI API key and forwards the request to Whisper. The key is
+// never shipped in the client bundle.
 
 import { pcm16ToWav } from "./audio";
 import { hasSpeech } from "./speech";
 
-const ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
-
-const MODEL = "whisper-1";
-
-// No default language — omitting the hint lets Whisper auto-detect the language.
-
-// Whisper hallucinates canned phrases on near-silent / non-speech audio (it was
-// trained on subtitled web video). We reject a segment when the model itself is
-// unsure it's speech: high no_speech_prob AND low average token logprob. These are
-// OpenAI's own decoder defaults for marking a segment silent.
-const NO_SPEECH_PROB_MAX = 0.6;
-const AVG_LOGPROB_MIN = -1.0;
-
-declare const __OPENAI_API_KEY__: string;
+// Same fixed server the sc bridge uses (see src/services/sc.ts).
+const SC_SERVER_BASE_URL = "http://159.223.204.39:8787";
 
 // `language` is an optional ISO-639-1 hint chosen in Settings; empty/undefined
 // means auto-detect.
 export async function transcribe(pcm: Uint8Array, sampleRate: number, language?: string): Promise<string> {
-  if (!__OPENAI_API_KEY__) throw new Error("OpenAI API key is not configured");
   if (!hasSpeech(pcm, sampleRate)) return "";
 
-  const lang = language || "";
-  const form = new FormData();
-  form.append("file", pcm16ToWav(pcm, sampleRate), "speech.wav");
-  form.append("model", MODEL);
-  // verbose_json gives per-segment no_speech_prob / avg_logprob so we can drop
-  // non-speech segments instead of letting Whisper hallucinate over them.
-  form.append("response_format", "verbose_json");
-  if (lang) form.append("language", lang);
+  const wavBlob = pcm16ToWav(pcm, sampleRate);
+  const wavBytes = new Uint8Array(await wavBlob.arrayBuffer());
+  const binary = Array.from(wavBytes, (b) => String.fromCharCode(b)).join("");
+  const wavBase64 = btoa(binary);
 
-  const res = await fetch(ENDPOINT, {
+  const res = await fetch(`${SC_SERVER_BASE_URL}/api/transcribe`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${__OPENAI_API_KEY__}` },
-    body: form,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ wav: wavBase64, language: language || undefined }),
   });
 
   if (!res.ok) {
@@ -48,19 +31,6 @@ export async function transcribe(pcm: Uint8Array, sampleRate: number, language?:
     throw new Error(`Transcription failed (${res.status}): ${detail.slice(0, 200)}`);
   }
 
-  const data = (await res.json()) as {
-    text?: string;
-    segments?: Array<{ text: string; no_speech_prob: number; avg_logprob: number }>;
-  };
-
-  // Keep only segments the model is reasonably confident contain speech. A segment
-  // is treated as silence (and dropped) when no_speech_prob is high AND the average
-  // logprob is low — both conditions, to avoid discarding quiet-but-real speech.
-  const segments = data.segments ?? [];
-  const speech = segments.filter(
-    (s) => !(s.no_speech_prob > NO_SPEECH_PROB_MAX && s.avg_logprob < AVG_LOGPROB_MIN),
-  );
-
-  // No segments (older response shape) → fall back to the top-level text.
-  return (segments.length ? speech.map((s) => s.text).join("") : data.text ?? "").trim();
+  const data = (await res.json()) as { text?: string; error?: string };
+  return data.text ?? "";
 }

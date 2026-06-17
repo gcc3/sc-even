@@ -41,7 +41,7 @@ function stripAnsi(s: string): string {
 // (leaving the glasses blank until the first reply).
 const PROMPT_AT_END = /[\r\n]*[A-Za-z0-9_.\-]*>[ \t]$/;
 
-function scBridge(): Plugin {
+function scBridge(apiKey: string): Plugin {
   let child: ChildProcessWithoutNullStreams | null = null;
   const clients = new Set<ServerResponse>();
   let buf = "";
@@ -138,6 +138,54 @@ function scBridge(): Plugin {
       });
     });
 
+    // Transcription proxy — keeps the OpenAI key server-side, never in the bundle.
+    server.middlewares.use("/api/transcribe", (req, res) => {
+      if (req.method !== "POST") return res.writeHead(405).end();
+      if (!apiKey) {
+        res.writeHead(503, { "Content-Type": "application/json" }).end(
+          JSON.stringify({ error: "OPENAI_API_KEY not set in .env" }),
+        );
+        return;
+      }
+      void readJson(req).then(async ({ wav: wavBase64, language }: { wav?: string; language?: string }) => {
+        if (!wavBase64) {
+          res.writeHead(400, { "Content-Type": "application/json" }).end(JSON.stringify({ error: "missing wav" }));
+          return;
+        }
+        const wavBuf = Buffer.from(wavBase64, "base64");
+        const form = new FormData();
+        form.append("file", new Blob([wavBuf], { type: "audio/wav" }), "speech.wav");
+        form.append("model", "whisper-1");
+        form.append("response_format", "verbose_json");
+        if (language) form.append("language", language);
+
+        const upstream = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}` },
+          body: form,
+        });
+        if (!upstream.ok) {
+          const detail = await upstream.text().catch(() => "");
+          res.writeHead(upstream.status, { "Content-Type": "application/json" }).end(
+            JSON.stringify({ error: detail.slice(0, 200) }),
+          );
+          return;
+        }
+        const data = (await upstream.json()) as {
+          text?: string;
+          segments?: Array<{ text: string; no_speech_prob: number; avg_logprob: number }>;
+        };
+        const NO_SPEECH_PROB_MAX = 0.6;
+        const AVG_LOGPROB_MIN = -1.0;
+        const segments = data.segments ?? [];
+        const speech = segments.filter(
+          (s) => !(s.no_speech_prob > NO_SPEECH_PROB_MAX && s.avg_logprob < AVG_LOGPROB_MIN),
+        );
+        const text = (segments.length ? speech.map((s) => s.text).join("") : data.text ?? "").trim();
+        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ text }));
+      });
+    });
+
     const cleanup = () => child?.kill();
     server.httpServer?.on("close", cleanup);
     process.on("exit", cleanup);
@@ -156,7 +204,6 @@ export default defineConfig(({ mode }) => {
   base: "./",
   define: {
     __APP_VERSION__: JSON.stringify(APP_VERSION),
-    __OPENAI_API_KEY__: JSON.stringify(env.OPENAI_API_KEY ?? ""),
   },
   optimizeDeps: { exclude: ["onnxruntime-web"] },
   // The packaged app runs in the device's (older) WebKit, not the modern
@@ -174,6 +221,6 @@ export default defineConfig(({ mode }) => {
       "Cross-Origin-Embedder-Policy": "require-corp",
     },
   },
-  plugins: [scBridge()],
+  plugins: [scBridge(env.OPENAI_API_KEY ?? "")],
   };
 });

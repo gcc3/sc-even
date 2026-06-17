@@ -16,6 +16,7 @@
 //   POST /api/sc/send   { session, text }             -> write a line to the CLI
 //   POST /api/sc/login  { session, username, password } -> `:login <u> <p>`
 //   GET  /healthz                                     -> "ok"
+//   POST /api/transcribe { wav: <base64>, language? } -> { text } via OpenAI Whisper
 //
 // Env:
 //   PORT             listen port (default 8787)
@@ -24,6 +25,7 @@
 //   SC_SESSION_TTL   ms to keep an idle session's process alive after its last
 //                    client disconnects, so brief reconnects don't lose the
 //                    conversation (default 120000)
+//   OPENAI_API_KEY   required for /api/transcribe (Whisper speech-to-text)
 
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
@@ -36,6 +38,11 @@ const ROOT = process.cwd();
 const SC_CMD = process.env.SC_CMD || join(ROOT, "node_modules", ".bin", "sc");
 const ALLOW_ORIGIN = process.env.SC_ALLOW_ORIGIN || "*";
 const SESSION_TTL = Number(process.env.SC_SESSION_TTL) || 120000;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
+
+// Thresholds for Whisper's per-segment speech confidence (mirrors transcribe.ts).
+const NO_SPEECH_PROB_MAX = 0.6;
+const AVG_LOGPROB_MIN = -1.0;
 
 // Strip ANSI escape codes (colors, cursor moves, `ESC c`). Same pattern as
 // vite.config.ts (adapted from the `ansi-regex` package).
@@ -209,6 +216,47 @@ const server = createServer(async (req, res) => {
       writeLine(s, `:login ${username} ${password ?? ""}`);
     }
     return void res.writeHead(200, { "Content-Type": "application/json" }).end(`{"ok":true}`);
+  }
+
+  if (path === "/api/transcribe" && req.method === "POST") {
+    if (!OPENAI_API_KEY) {
+      return void res
+        .writeHead(503, { "Content-Type": "application/json" })
+        .end(JSON.stringify({ error: "OPENAI_API_KEY not configured on server" }));
+    }
+    const { wav: wavBase64, language } = await readJson(req);
+    if (!wavBase64) {
+      return void res
+        .writeHead(400, { "Content-Type": "application/json" })
+        .end(JSON.stringify({ error: "missing wav" }));
+    }
+    const wavBuf = Buffer.from(wavBase64, "base64");
+    const form = new FormData();
+    form.append("file", new Blob([wavBuf], { type: "audio/wav" }), "speech.wav");
+    form.append("model", "whisper-1");
+    form.append("response_format", "verbose_json");
+    if (language) form.append("language", language);
+
+    const upstream = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: form,
+    });
+    if (!upstream.ok) {
+      const detail = await upstream.text().catch(() => "");
+      return void res
+        .writeHead(upstream.status, { "Content-Type": "application/json" })
+        .end(JSON.stringify({ error: detail.slice(0, 200) }));
+    }
+    const data = await upstream.json();
+    const segments = data.segments ?? [];
+    const speech = segments.filter(
+      (s) => !(s.no_speech_prob > NO_SPEECH_PROB_MAX && s.avg_logprob < AVG_LOGPROB_MIN),
+    );
+    const text = (segments.length ? speech.map((s) => s.text).join("") : data.text ?? "").trim();
+    return void res
+      .writeHead(200, { "Content-Type": "application/json" })
+      .end(JSON.stringify({ text }));
   }
 
   res.writeHead(404).end("not found");

@@ -11,7 +11,7 @@
 //   pm2 save && pm2 startup               # persist across reboots
 //
 // Env vars serve.mjs reads (see its header): PORT, SC_CMD, SC_ALLOW_ORIGIN,
-// SC_SESSION_TTL.
+// SC_SESSION_TTL, OPENAI_API_KEY (required for /api/transcribe).
 
 module.exports = {
   apps: [
@@ -30,6 +30,7 @@ module.exports = {
         PORT: 8787,
         // SC_ALLOW_ORIGIN: "*",
         // SC_SESSION_TTL: 120000,
+        // OPENAI_API_KEY: "sk-...",  // set this in the server environment or a .env file
       },
       time: true, // prefix log lines with timestamps
       out_file: "logs/sc-bridge.out.log",
