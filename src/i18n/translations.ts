@@ -1,4 +1,23 @@
-export type Locale = "en" | "ja" | "zh" | "zt" | "ko" | "ar" | "bn" | "de" | "es" | "fr" | "hi" | "id" | "it" | "nl" | "pl" | "pt" | "ru" | "sv" | "tr";
+export type Locale =
+  | "en"
+  | "ja"
+  | "zh"
+  | "zt"
+  | "ko"
+  | "ar"
+  | "bn"
+  | "de"
+  | "es"
+  | "fr"
+  | "hi"
+  | "id"
+  | "it"
+  | "nl"
+  | "pl"
+  | "pt"
+  | "ru"
+  | "sv"
+  | "tr";
 
 export interface Translations {
   appTitle: string;
@@ -26,7 +45,6 @@ export interface Translations {
   themeTerminal: string;
   fieldLanguage: string;
   passwordHint: string;
-};
 }
 
 const en: Translations = {
@@ -561,4 +579,24 @@ const tr: Translations = {
   passwordHint: "* En az 8 karakter.",
 };
 
-export const TRANSLATIONS: Record<Locale, Translations> = { en, ja, zh, zt, ko, ar, bn, de, es, fr, hi, id, it, nl, pl, pt, ru, sv, tr };
+export const TRANSLATIONS: Record<Locale, Translations> = {
+  en,
+  ja,
+  zh,
+  zt,
+  ko,
+  ar,
+  bn,
+  de,
+  es,
+  fr,
+  hi,
+  id,
+  it,
+  nl,
+  pl,
+  pt,
+  ru,
+  sv,
+  tr,
+};
