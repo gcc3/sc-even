@@ -104,6 +104,11 @@ async function main() {
   let scReady = false;
   let pendingLogin: { username: string; password: string } | null = null;
 
+  // Glasses single-tap confirmation state: first tap shows a prompt, second
+  // tap within the window confirms the reset.
+  let pendingReset = false;
+  let pendingResetTimer = 0;
+
   const sc = connectSc({
     onChunk: (text) => {
       if (!discardChunks) emit(text);
@@ -327,10 +332,23 @@ async function main() {
 
     // Single-tap
     // Arrives as a sysEvent with only an `eventSource` and no `eventType`
-    // — the host doesn't emit CLICK_EVENT for it. Treat as a tap: reset the conversation.
+    // — the host doesn't emit CLICK_EVENT for it. First tap shows a confirmation
+    // prompt; a second tap within 3 s confirms the reset.
     const eventSource = event.sysEvent?.eventSource;
     if (eventType == null && eventSource != null && eventSource !== EventSourceType.TOUCH_EVENT_FORM_DUMMY_NULL) {
-      reset();
+      if (pendingReset) {
+        window.clearTimeout(pendingResetTimer);
+        pendingReset = false;
+        reset();
+      } else {
+        pendingReset = true;
+        const savedStatus = statusText;
+        setStatus("Tap again to reset");
+        pendingResetTimer = window.setTimeout(() => {
+          pendingReset = false;
+          setStatus(savedStatus);
+        }, 3000);
+      }
       return;
     }
 
