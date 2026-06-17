@@ -32,7 +32,7 @@ import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { log, error, logRequest } from "./src/utils/logUtils.mjs";
+import { logRequest } from "./src/utils/logUtils.mjs";
 
 const PORT = Number(process.env.PORT) || 8787;
 const ROOT = process.cwd();
@@ -40,10 +40,6 @@ const SC_CMD = process.env.SC_CMD || join(ROOT, "node_modules", ".bin", "sc");
 const ALLOW_ORIGIN = process.env.SC_ALLOW_ORIGIN || "*";
 const SESSION_TTL = Number(process.env.SC_SESSION_TTL) || 120000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
-
-// Thresholds for Whisper's per-segment speech confidence (mirrors transcribe.ts).
-const NO_SPEECH_PROB_MAX = 0.6;
-const AVG_LOGPROB_MIN = -1.0;
 
 // Strip ANSI escape codes (colors, cursor moves, `ESC c`). Same pattern as
 // vite.config.ts (adapted from the `ansi-regex` package).
@@ -230,71 +226,6 @@ const server = createServer(async (req, res) => {
       writeLine(s, `:login ${username} ${password ?? ""}`);
     }
     return void res.writeHead(200, { "Content-Type": "application/json" }).end(`{"ok":true}`);
-  }
-
-  if (path === "/api/transcribe" && req.method === "POST") {
-    const t0 = Date.now();
-    log("[transcribe] request received");
-
-    if (!OPENAI_API_KEY) {
-      error("[transcribe] OPENAI_API_KEY not configured");
-      return void res
-        .writeHead(503, { "Content-Type": "application/json" })
-        .end(JSON.stringify({ error: "OPENAI_API_KEY not configured on server" }));
-    }
-
-    const { wav: wavBase64, language } = await readJson(req);
-    if (!wavBase64) {
-      error("[transcribe] missing wav field in request body");
-      return void res
-        .writeHead(400, { "Content-Type": "application/json" })
-        .end(JSON.stringify({ error: "missing wav" }));
-    }
-
-    const wavBuf = Buffer.from(wavBase64, "base64");
-    log(`[transcribe] wav size=${wavBuf.length}B language=${language || "auto"}`);
-
-    const form = new FormData();
-    form.append("file", new Blob([wavBuf], { type: "audio/wav" }), "speech.wav");
-    form.append("model", "whisper-1");
-    form.append("response_format", "verbose_json");
-    if (language) form.append("language", language);
-
-    log("[transcribe] calling OpenAI Whisper...");
-    let upstream;
-    try {
-      upstream = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
-        body: form,
-      });
-    } catch (err) {
-      error("[transcribe] fetch error:", err);
-      return void res
-        .writeHead(502, { "Content-Type": "application/json" })
-        .end(JSON.stringify({ error: String(err) }));
-    }
-
-    log(`[transcribe] OpenAI responded status=${upstream.status} (${Date.now() - t0}ms)`);
-
-    if (!upstream.ok) {
-      const detail = await upstream.text().catch(() => "");
-      error(`[transcribe] OpenAI error ${upstream.status}:`, detail.slice(0, 300));
-      return void res
-        .writeHead(upstream.status, { "Content-Type": "application/json" })
-        .end(JSON.stringify({ error: detail.slice(0, 200) }));
-    }
-
-    const data = await upstream.json();
-    const segments = data.segments ?? [];
-    const speech = segments.filter(
-      (s) => !(s.no_speech_prob > NO_SPEECH_PROB_MAX && s.avg_logprob < AVG_LOGPROB_MIN),
-    );
-    const text = (speech.length ? speech.map((s) => s.text).join("") : data.text ?? "").trim();
-    log(`[transcribe] done total=${Date.now() - t0}ms segments=${segments.length} kept=${speech.length} text=${JSON.stringify(text.slice(0, 80))}`);
-    return void res
-      .writeHead(200, { "Content-Type": "application/json" })
-      .end(JSON.stringify({ text }));
   }
 
   res.writeHead(404).end("not found");
