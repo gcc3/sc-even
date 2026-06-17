@@ -4,7 +4,7 @@
 // hallucinates canned phrases when given non-speech audio.
 
 const BYTES_PER_SAMPLE = 2;
-const SPEECH_RMS_THRESHOLD = 0.01; // ~327 / 32768 in normalized float space
+const SPEECH_RMS_THRESHOLD = 0.003; // lowered for glasses mic (lower gain than desktop mic)
 const MIN_SPEECH_SAMPLES = 1600; // 100 ms at 16 kHz
 
 export function hasSpeech(pcm: Uint8Array, sampleRate: number): boolean {

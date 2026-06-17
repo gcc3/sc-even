@@ -181,7 +181,7 @@ function scBridge(apiKey: string): Plugin {
         const speech = segments.filter(
           (s) => !(s.no_speech_prob > NO_SPEECH_PROB_MAX && s.avg_logprob < AVG_LOGPROB_MIN),
         );
-        const text = (segments.length ? speech.map((s) => s.text).join("") : data.text ?? "").trim();
+        const text = (speech.length ? speech.map((s) => s.text).join("") : data.text ?? "").trim();
         res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ text }));
       });
     });
