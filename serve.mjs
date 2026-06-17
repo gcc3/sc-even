@@ -16,7 +16,6 @@
 //   POST /api/sc/send   { session, text }             -> write a line to the CLI
 //   POST /api/sc/login  { session, username, password } -> `:login <u> <p>`
 //   GET  /healthz                                     -> "ok"
-//   POST /api/transcribe { wav: <base64>, language? } -> { text } via OpenAI Whisper
 //
 // Env:
 //   PORT             listen port (default 8787)
@@ -25,7 +24,7 @@
 //   SC_SESSION_TTL   ms to keep an idle session's process alive after its last
 //                    client disconnects, so brief reconnects don't lose the
 //                    conversation (default 120000)
-//   OPENAI_API_KEY   required for /api/transcribe (Whisper speech-to-text)
+//   OPENAI_API_KEY   served to the client via /api/key for client-side Whisper
 
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
