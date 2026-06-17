@@ -32,7 +32,7 @@ import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { log, error } from "./src/utils/logUtils.mjs";
+import { log, error, logRequest } from "./src/utils/logUtils.mjs";
 
 const PORT = Number(process.env.PORT) || 8787;
 const ROOT = process.cwd();
@@ -164,6 +164,13 @@ function readJson(req) {
 }
 
 const server = createServer(async (req, res) => {
+  const t0 = Date.now();
+  const originalWriteHead = res.writeHead.bind(res);
+  res.writeHead = (status, ...rest) => {
+    logRequest(req.method, req.url, status, Date.now() - t0);
+    return originalWriteHead(status, ...rest);
+  };
+
   cors(res);
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname;

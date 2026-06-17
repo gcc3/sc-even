@@ -6,9 +6,11 @@ import { join } from "node:path";
 
 const LOG_DIR = join(process.cwd(), "logs");
 const LOG_FILE = join(LOG_DIR, "transcript.log");
+const SERVER_LOG_FILE = join(LOG_DIR, "server.log");
 
 mkdirSync(LOG_DIR, { recursive: true });
 const stream = createWriteStream(LOG_FILE, { flags: "a" });
+const serverStream = createWriteStream(SERVER_LOG_FILE, { flags: "a" });
 
 function write(level, ...args) {
   const ts = new Date().toISOString();
@@ -27,3 +29,10 @@ function write(level, ...args) {
 export const log = (...args) => write("INFO", ...args);
 export const warn = (...args) => write("WARN", ...args);
 export const error = (...args) => write("ERROR", ...args);
+
+export function logRequest(method, url, status, durationMs) {
+  const ts = new Date().toISOString();
+  const line = `${ts} ${method} ${url} ${status} ${durationMs}ms\n`;
+  serverStream.write(line);
+  process.stdout.write(line);
+}
