@@ -18,6 +18,7 @@ module.exports = {
     {
       name: "sc-bridge",
       script: "serve.mjs",
+      node_args: "--env-file=.env",
       cwd: __dirname,
       instances: 1,
       exec_mode: "fork", // SSE + per-session child sc processes — single instance only
