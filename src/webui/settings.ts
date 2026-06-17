@@ -308,7 +308,7 @@ export function createSettingsModal(
     await saveSettings(bridge, settingsRef.current);
     setLocale(localeFromLangCode(language));
     // Notify the server of the selected language
-    if (language) callbacks.onSendCommand(`:lang use ${language}`);
+    callbacks.onSendCommand(language ? `:lang use ${language}` : `:lang reset`);
     callbacks.onLanguageChange(speechLanguage);
     applyTheme(theme);
     termEl.classList.toggle("term--cursor-blink", cursorBlink);

@@ -43,6 +43,8 @@ export interface WebUIOptions {
   onMuteChange: (muted: boolean) => void;
   /** Speech language changed (also fired once with the saved value at startup). */
   onLanguageChange: (language: string) => void;
+  /** SC CLI language command to send after login completes (startup only). */
+  onLangCommand?: (lang: string) => void;
   /** Cursor blink setting changed (also fired once with the saved value at startup). */
   onCursorBlinkChange: (blink: boolean) => void;
   /** Transcription enabled/disabled (also fired once with the saved value at startup). */
@@ -105,9 +107,6 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   });
 
   options.onLanguageChange(settingsRef.current.speechLanguage);
-  if (settingsRef.current.language) {
-    options.onSubmit(`:lang use ${settingsRef.current.language}`);
-  }
   applyTheme(settingsRef.current.theme);
   termEl.classList.toggle("term--cursor-blink", settingsRef.current.cursorBlink);
   options.onCursorBlinkChange(settingsRef.current.cursorBlink);
@@ -117,6 +116,10 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   if (settingsRef.current.username && settingsRef.current.password) {
     options.onLogin(settingsRef.current.username, settingsRef.current.password);
   }
+
+  // Defer the SC CLI language command until after login completes.
+  // Always send — empty string means Auto → :lang reset.
+  options.onLangCommand?.(settingsRef.current.language);
 
   // --- input line ---------------------------------------------------------
   // Tap anywhere on the terminal to open the keyboard.

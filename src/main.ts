@@ -103,6 +103,7 @@ async function main() {
   // credentials here and send them on the first `onReady` (when "gpt-5.5>" shows).
   let scReady = false;
   let pendingLogin: { username: string; password: string } | null = null;
+  let pendingLangCommand: string | null = null;
 
   // Glasses single-tap confirmation state: first tap shows a prompt, second
   // tap within the window confirms the reset.
@@ -142,6 +143,9 @@ async function main() {
         echoLogin(pendingLogin.username, pendingLogin.password);
         void sc.login(pendingLogin.username, pendingLogin.password);
         pendingLogin = null;
+      } else if (pendingLangCommand) {
+        ask(pendingLangCommand);
+        pendingLangCommand = null;
       }
     },
     onUnavailable: () => emit("\n[sc bridge unavailable — run `npm run dev`]\n"),
@@ -299,6 +303,9 @@ async function main() {
     },
     onLanguageChange: (language) => {
       sttLanguage = language;
+    },
+    onLangCommand: (lang) => {
+      pendingLangCommand = lang ? `:lang use ${lang}` : `:lang reset`;
     },
     onCursorBlinkChange: (blink) => {
       display.setCursorBlink(blink);
