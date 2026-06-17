@@ -3,9 +3,8 @@ import { createDisplay } from "./glassesui/glasses";
 import { createWebUI, type WebUI } from "./webui/webui";
 import { connectSc } from "./services/sc";
 import { SpeechSegmenter } from "./utils/segmenter";
-import { hasApiKey, setApiKey, transcribe } from "./utils/transcribe";
+import { transcribe } from "./utils/transcribe";
 import { trailingPrompt, stripTrailingPrompt } from "./utils/text";
-import { msg } from "./i18n";
 
 const SAMPLE_RATE = 16000;
 const TERMINAL_MAX = 4000;
@@ -36,8 +35,8 @@ async function main() {
   let draft = "";
 
   // Assigned once createWebUI resolves. Declared up front (and accessed with `?.`)
-  // because callbacks passed to createWebUI — e.g. onApiKeyChange — can fire during
-  // its setup, before this is assigned; the glasses still render in the meantime.
+  // because callbacks passed to createWebUI can fire during its setup, before this
+  // is assigned; the glasses still render in the meantime.
   let ui: WebUI | undefined;
 
   function renderAll() {
@@ -71,12 +70,6 @@ async function main() {
     // Voice transcription needs the OpenAI key. Never enable the mic or show
     // "listening" without one — guard here so every caller (startup, and onReady
     // after a typed exchange) is covered.
-    if (!hasApiKey()) {
-      listening = false;
-      setStatus("");
-      return;
-    }
-
     if (!segmenterReady) {
       setStatus("● loading VAD");
       try {
@@ -302,13 +295,6 @@ async function main() {
     onLanguageChange: (language) => {
       sttLanguage = language;
     },
-    onApiKeyChange: (apiKey) => {
-      setApiKey(apiKey);
-      // Voice transcription needs the OpenAI key: start listening when one is
-      // present (also on startup, with the saved key), stop when it's missing.
-      if (apiKey) void startListening();
-      else void stopListening();
-    },
     onCursorBlinkChange: (blink) => {
       display.setCursorBlink(blink);
     },
@@ -322,11 +308,6 @@ async function main() {
       else void startListening();
     },
   });
-
-  if (!hasApiKey()) {
-    setStatus("");
-    ui?.toast(msg("noApiKey"), 5000);
-  }
 
   // Even app bridge events
   bridge.onEvenHubEvent((event) => {

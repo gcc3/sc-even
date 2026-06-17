@@ -221,11 +221,6 @@ export function settingsModalHTML(): string {
           <span class="field__label" data-i18n-ui-language>${t("fieldLanguage")}</span>
           <div data-ui-locale></div>
         </div>
-        <label class="field">
-          <span class="field__label" data-i18n-api-key>${t("fieldApiKey")}</span>
-          <input class="field__input" data-api-key type="password"
-                 placeholder="sk-" autocomplete="off" />
-        </label>
         <label class="switch">
           <span data-i18n-transcription><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>${t("toggleTranscription")}</span>
           <input type="checkbox" data-transcription />
@@ -256,7 +251,6 @@ export function settingsModalHTML(): string {
 }
 
 export interface SettingsModalCallbacks {
-  onApiKeyChange: (apiKey: string) => void;
   onLanguageChange: (language: string) => void;
   onCursorBlinkChange: (blink: boolean) => void;
   onTranscriptionChange: (enabled: boolean) => void;
@@ -272,7 +266,6 @@ export function createSettingsModal(
   callbacks: SettingsModalCallbacks,
 ) {
   const settingsModal = root.querySelector<HTMLDivElement>("[data-settings-modal]")!;
-  const apiKeyInput = settingsModal.querySelector<HTMLInputElement>("[data-api-key]")!;
   const languageSelect = createDropdown(getLanguages(), () => {}, { searchable: true });
   const speechLanguageSelect = createDropdown(speechLanguages(), () => {}, { searchable: true });
   // Preview the theme live as the user picks (reverted on Cancel via closeSettings).
@@ -283,29 +276,16 @@ export function createSettingsModal(
   const savedNote = settingsModal.querySelector<HTMLSpanElement>("[data-saved]")!;
   const cursorBlinkCheckbox = settingsModal.querySelector<HTMLInputElement>("[data-cursor-blink]")!;
   const transcriptionCheckbox = settingsModal.querySelector<HTMLInputElement>("[data-transcription]")!;
-  const speechLangField = settingsModal.querySelector<HTMLDivElement>("[data-speech-lang-field]")!;
-
-  const setApiKeyDependentState = (hasKey: boolean) => {
-    transcriptionCheckbox.disabled = !hasKey;
-    if (!hasKey) transcriptionCheckbox.checked = false;
-    speechLangField.classList.toggle("field--disabled", !hasKey);
-  };
 
   const open = () => {
-    apiKeyInput.value = settingsRef.current.apiKey;
     languageSelect.value = settingsRef.current.language;
     speechLanguageSelect.value = settingsRef.current.speechLanguage;
     themeSelect.value = settingsRef.current.theme;
     cursorBlinkCheckbox.checked = settingsRef.current.cursorBlink;
     transcriptionCheckbox.checked = settingsRef.current.transcription;
-    setApiKeyDependentState(!!settingsRef.current.apiKey);
     savedNote.classList.remove("modal__saved--show");
     settingsModal.classList.add("modal--open");
   };
-
-  apiKeyInput.addEventListener("input", () => {
-    setApiKeyDependentState(!!apiKeyInput.value.trim());
-  });
 
   const close = () => {
     applyTheme(settingsRef.current.theme); // discard any unsaved live preview
@@ -319,15 +299,13 @@ export function createSettingsModal(
   });
 
   settingsModal.querySelector("[data-save]")!.addEventListener("click", async () => {
-    const apiKey = apiKeyInput.value.trim();
     const language = languageSelect.value;
     const speechLanguage = speechLanguageSelect.value;
     const theme = themeSelect.value;
     const cursorBlink = cursorBlinkCheckbox.checked;
     const transcription = transcriptionCheckbox.checked;
-    settingsRef.current = { ...settingsRef.current, apiKey, language, speechLanguage, theme, cursorBlink, transcription };
+    settingsRef.current = { ...settingsRef.current, language, speechLanguage, theme, cursorBlink, transcription };
     await saveSettings(bridge, settingsRef.current);
-    callbacks.onApiKeyChange(apiKey);
     setLocale(localeFromLangCode(language));
     // Notify the server of the selected language
     if (language) callbacks.onSendCommand(`:lang use ${language}`);
@@ -335,7 +313,6 @@ export function createSettingsModal(
     applyTheme(theme);
     termEl.classList.toggle("term--cursor-blink", cursorBlink);
     callbacks.onCursorBlinkChange(cursorBlink);
-    setApiKeyDependentState(!!apiKey);
     callbacks.onTranscriptionChange(transcription);
     callbacks.onApplyTranslations();
     savedNote.classList.add("modal__saved--show");
@@ -344,11 +321,9 @@ export function createSettingsModal(
 
   return {
     open,
-    setApiKeyDependentState,
     applyTranslations() {
       settingsModal.querySelector("[data-i18n-settings-title]")!.textContent = t("settingsTitle");
       settingsModal.querySelector("[data-i18n-ui-language]")!.textContent = t("fieldLanguage");
-      settingsModal.querySelector("[data-i18n-api-key]")!.textContent = t("fieldApiKey");
       settingsModal.querySelector("[data-i18n-speech-lang]")!.textContent = t("fieldSpeechLang");
       settingsModal.querySelector("[data-i18n-theme]")!.textContent = t("fieldTheme");
       settingsModal.querySelector("[data-i18n-cursor-blink]")!.textContent = t("toggleCursorBlink");

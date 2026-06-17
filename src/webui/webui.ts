@@ -43,8 +43,6 @@ export interface WebUIOptions {
   onMuteChange: (muted: boolean) => void;
   /** Speech language changed (also fired once with the saved value at startup). */
   onLanguageChange: (language: string) => void;
-  /** OpenAI API key changed (also fired once with the saved value at startup). */
-  onApiKeyChange: (apiKey: string) => void;
   /** Cursor blink setting changed (also fired once with the saved value at startup). */
   onCursorBlinkChange: (blink: boolean) => void;
   /** Transcription enabled/disabled (also fired once with the saved value at startup). */
@@ -96,7 +94,6 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   });
 
   const settingsModal = createSettingsModal(root, settingsRef, bridge, termEl, {
-    onApiKeyChange: options.onApiKeyChange,
     onLanguageChange: options.onLanguageChange,
     onCursorBlinkChange: options.onCursorBlinkChange,
     onTranscriptionChange: options.onTranscriptionChange,
@@ -111,11 +108,9 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   if (settingsRef.current.language) {
     options.onSubmit(`:lang use ${settingsRef.current.language}`);
   }
-  options.onApiKeyChange(settingsRef.current.apiKey);
   applyTheme(settingsRef.current.theme);
   termEl.classList.toggle("term--cursor-blink", settingsRef.current.cursorBlink);
   options.onCursorBlinkChange(settingsRef.current.cursorBlink);
-  settingsModal.setApiKeyDependentState(!!settingsRef.current.apiKey);
   options.onTranscriptionChange(settingsRef.current.transcription);
 
   // Auto-login at startup if saved credentials exist.

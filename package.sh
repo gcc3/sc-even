@@ -25,6 +25,13 @@ PACKAGE_ID=$(node -p "require('./$APP_JSON').package_id" 2>/dev/null || echo "ap
 VERSION=$(node -p "require('./$APP_JSON').version" 2>/dev/null || echo "0.0.0")
 OUTPUT="${PACKAGE_ID}-${VERSION}.ehpk"
 
+echo "==> Checking OPENAI_API_KEY"
+if [ -z "${OPENAI_API_KEY:-}" ] && ! grep -q "^OPENAI_API_KEY=" .env 2>/dev/null; then
+  echo "    OPENAI_API_KEY is not set."
+  echo "    Create a .env file with: OPENAI_API_KEY=sk-..."
+  exit 1
+fi
+
 echo "==> Building web app (npm run build)"
 npm run build
 

@@ -20,22 +20,12 @@ const MODEL = "whisper-1";
 const NO_SPEECH_PROB_MAX = 0.6;
 const AVG_LOGPROB_MIN = -1.0;
 
-// The OpenAI API key is supplied at runtime from Settings (stored on-device), not
-// baked in at build time — so it never ships inside the .ehpk.
-let apiKey = "";
-
-export function setApiKey(key: string): void {
-  apiKey = key.trim();
-}
-
-export function hasApiKey(): boolean {
-  return Boolean(apiKey);
-}
+declare const __OPENAI_API_KEY__: string;
 
 // `language` is an optional ISO-639-1 hint chosen in Settings; empty/undefined
 // means auto-detect.
 export async function transcribe(pcm: Uint8Array, sampleRate: number, language?: string): Promise<string> {
-  if (!apiKey) throw new Error("OpenAI API key is not set");
+  if (!__OPENAI_API_KEY__) throw new Error("OpenAI API key is not configured");
   if (!hasSpeech(pcm, sampleRate)) return "";
 
   const lang = language || "";
@@ -49,7 +39,7 @@ export async function transcribe(pcm: Uint8Array, sampleRate: number, language?:
 
   const res = await fetch(ENDPOINT, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
+    headers: { Authorization: `Bearer ${__OPENAI_API_KEY__}` },
     body: form,
   });
 

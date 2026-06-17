@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin, type ViteDevServer } from "vite";
+import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from "vite";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { join } from "node:path";
 import { readFileSync } from "node:fs";
@@ -150,10 +150,14 @@ function scBridge(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  return {
   base: "./",
-  // Expose the app version to the client code as a compile-time constant.
-  define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __OPENAI_API_KEY__: JSON.stringify(env.OPENAI_API_KEY ?? ""),
+  },
   optimizeDeps: { exclude: ["onnxruntime-web"] },
   // The packaged app runs in the device's (older) WebKit, not the modern
   // simulator. Target an older Safari so the build keeps/adds vendor prefixes
@@ -171,4 +175,5 @@ export default defineConfig({
     },
   },
   plugins: [scBridge()],
+  };
 });
