@@ -67,8 +67,8 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
           <span class="app__status" data-status></span>
         </div>
         <div class="app__actions">
-          <button class="icon-btn" data-refresh>${REFRESH_SVG}</button>
           <button class="icon-btn" data-mute title="Mute microphone">${MIC_SVG}</button>
+          <button class="icon-btn" data-refresh>${REFRESH_SVG}</button>
           <button class="icon-btn" data-open-login>${USER_SVG}</button>
           <button class="icon-btn" data-open-settings>${GEAR_SVG}</button>
         </div>
@@ -178,7 +178,6 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     muted = !muted;
     muteBtn.innerHTML = muted ? MIC_OFF_SVG : MIC_SVG;
     muteBtn.title = muted ? "Unmute microphone" : "Mute microphone";
-    muteBtn.classList.toggle("icon-btn--active", muted);
     options.onMuteChange(muted);
   });
 

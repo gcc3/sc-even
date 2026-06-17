@@ -155,10 +155,6 @@ body {
   height: 16px;
 }
 
-.icon-btn--active {
-  color: #ef4444;
-  border-color: #ef4444;
-}
 
 /* ---- terminal output ---- */
 .term {
