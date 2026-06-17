@@ -20,5 +20,10 @@ git pull
 echo "==> Installing dependencies"
 npm install
 
+echo "==> Loading .env"
+if [ -f .env ]; then
+  set -a && source .env && set +a
+fi
+
 echo "==> Restarting sc-bridge"
-pm2 restart ecosystem.config.cjs && echo "==> sc-bridge restarted."
+pm2 restart ecosystem.config.cjs --update-env && echo "==> sc-bridge restarted."
