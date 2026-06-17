@@ -22,12 +22,8 @@ export function setLocale(locale: Locale): void {
   current = TRANSLATIONS[locale];
 }
 
-export function t(key: keyof Omit<Translations, "message">): string {
+export function t(key: keyof Translations): string {
   return current[key] as string;
-}
-
-export function msg(key: keyof Translations["message"]): string {
-  return current.message[key];
 }
 
 export function getLanguages(): Array<{ value: string; label: string }> {

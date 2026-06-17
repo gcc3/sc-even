@@ -26,9 +26,7 @@ export interface Translations {
   themeTerminal: string;
   fieldLanguage: string;
   passwordHint: string;
-  message: {
-    noApiKey: string;
-  };
+};
 }
 
 const en: Translations = {
@@ -57,9 +55,6 @@ const en: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Language",
   passwordHint: "* At least 8 characters.",
-  message: {
-    noApiKey: "Open Settings and set OpenAI API key to start voice transcription.",
-  },
 };
 
 const ja: Translations = {
@@ -88,9 +83,6 @@ const ja: Translations = {
   themeTerminal: "ターミナル",
   fieldLanguage: "言語",
   passwordHint: "* 8文字以上で入力してください。",
-  message: {
-    noApiKey: "設定を開いてOpenAI APIキーを設定すると音声認識が開始されます。",
-  },
 };
 
 const zh: Translations = {
@@ -119,9 +111,6 @@ const zh: Translations = {
   themeTerminal: "终端",
   fieldLanguage: "语言",
   passwordHint: "* 请输入至少 8 个字符。",
-  message: {
-    noApiKey: "请打开设置并设置您的 OpenAI API 密钥以开始语音识别。",
-  },
 };
 
 const zt: Translations = {
@@ -150,9 +139,6 @@ const zt: Translations = {
   themeTerminal: "終端機",
   fieldLanguage: "語言",
   passwordHint: "* 請輸入至少 8 個字元。",
-  message: {
-    noApiKey: "請開啟設定並設定您的 OpenAI API 金鑰以開始文字轉錄。",
-  },
 };
 
 const ko: Translations = {
@@ -181,9 +167,6 @@ const ko: Translations = {
   themeTerminal: "터미널",
   fieldLanguage: "언어",
   passwordHint: "* 8자 이상 입력해 주세요.",
-  message: {
-    noApiKey: "설정을 열고 OpenAI API 키를 설정하면 음성 전사가 시작됩니다。",
-  },
 };
 
 const ar: Translations = {
@@ -212,9 +195,6 @@ const ar: Translations = {
   themeTerminal: "طرفية",
   fieldLanguage: "اللغة",
   passwordHint: "* 8 أحرف على الأقل.",
-  message: {
-    noApiKey: "افتح الإعدادات وأدخل مفتاح OpenAI API لبدء النسخ الصوتي.",
-  },
 };
 
 const bn: Translations = {
@@ -243,9 +223,6 @@ const bn: Translations = {
   themeTerminal: "টার্মিনাল",
   fieldLanguage: "ভাষা",
   passwordHint: "* কমপক্ষে ৮টি অক্ষর।",
-  message: {
-    noApiKey: "ভয়েস ট্রান্সক্রিপশন শুরু করতে সেটিংস খুলুন এবং OpenAI API কী সেট করুন।",
-  },
 };
 
 const de: Translations = {
@@ -274,9 +251,6 @@ const de: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Sprache",
   passwordHint: "* Mindestens 8 Zeichen.",
-  message: {
-    noApiKey: "Öffnen Sie die Einstellungen und legen Sie den OpenAI API-Schlüssel fest, um die Sprachtranskription zu starten.",
-  },
 };
 
 const es: Translations = {
@@ -305,9 +279,6 @@ const es: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Idioma",
   passwordHint: "* Al menos 8 caracteres.",
-  message: {
-    noApiKey: "Abre la configuración y establece la clave API de OpenAI para iniciar la transcripción de voz.",
-  },
 };
 
 const fr: Translations = {
@@ -336,9 +307,6 @@ const fr: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Langue",
   passwordHint: "* Au moins 8 caractères.",
-  message: {
-    noApiKey: "Ouvrez les paramètres et définissez la clé API OpenAI pour démarrer la transcription vocale.",
-  },
 };
 
 const hi: Translations = {
@@ -367,9 +335,6 @@ const hi: Translations = {
   themeTerminal: "टर्मिनल",
   fieldLanguage: "भाषा",
   passwordHint: "* कम से कम 8 अक्षर।",
-  message: {
-    noApiKey: "वॉइस ट्रांसक्रिप्शन शुरू करने के लिए सेटिंग्स खोलें और OpenAI API कुंजी सेट करें।",
-  },
 };
 
 const id: Translations = {
@@ -398,9 +363,6 @@ const id: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Bahasa",
   passwordHint: "* Minimal 8 karakter.",
-  message: {
-    noApiKey: "Buka Pengaturan dan atur Kunci API OpenAI untuk memulai transkripsi suara.",
-  },
 };
 
 const it: Translations = {
@@ -429,9 +391,6 @@ const it: Translations = {
   themeTerminal: "Terminale",
   fieldLanguage: "Lingua",
   passwordHint: "* Almeno 8 caratteri.",
-  message: {
-    noApiKey: "Apri le Impostazioni e imposta la chiave API OpenAI per avviare la trascrizione vocale.",
-  },
 };
 
 const nl: Translations = {
@@ -460,9 +419,6 @@ const nl: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Taal",
   passwordHint: "* Minimaal 8 tekens.",
-  message: {
-    noApiKey: "Open Instellingen en stel de OpenAI API-sleutel in om spraakomzetting te starten.",
-  },
 };
 
 const pl: Translations = {
@@ -491,9 +447,6 @@ const pl: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Język",
   passwordHint: "* Co najmniej 8 znaków.",
-  message: {
-    noApiKey: "Otwórz Ustawienia i ustaw klucz API OpenAI, aby rozpocząć transkrypcję głosową.",
-  },
 };
 
 const pt: Translations = {
@@ -522,9 +475,6 @@ const pt: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Idioma",
   passwordHint: "* Pelo menos 8 caracteres.",
-  message: {
-    noApiKey: "Abra as Configurações e defina a chave API OpenAI para iniciar a transcrição de voz.",
-  },
 };
 
 const ru: Translations = {
@@ -553,9 +503,6 @@ const ru: Translations = {
   themeTerminal: "Терминал",
   fieldLanguage: "Язык",
   passwordHint: "* Не менее 8 символов.",
-  message: {
-    noApiKey: "Откройте настройки и установите ключ API OpenAI для запуска голосовой транскрипции.",
-  },
 };
 
 const sv: Translations = {
@@ -584,9 +531,6 @@ const sv: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Språk",
   passwordHint: "* Minst 8 tecken.",
-  message: {
-    noApiKey: "Öppna Inställningar och ange OpenAI API-nyckeln för att starta rösttranskription.",
-  },
 };
 
 const tr: Translations = {
@@ -615,9 +559,6 @@ const tr: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Dil",
   passwordHint: "* En az 8 karakter.",
-  message: {
-    noApiKey: "Ses transkripsiyonunu başlatmak için Ayarlar'ı açın ve OpenAI API anahtarını ayarlayın.",
-  },
 };
 
 export const TRANSLATIONS: Record<Locale, Translations> = { en, ja, zh, zt, ko, ar, bn, de, es, fr, hi, id, it, nl, pl, pt, ru, sv, tr };
