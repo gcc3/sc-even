@@ -158,7 +158,7 @@ async function main() {
     webLog = (stripped + `${lastPrompt}${text}\n`).slice(-WEB_LOG_MAX);
     generating = true;
     void stopListening(); // clears the status; set "generating" after so it wins
-    setStatus("");
+    setStatus("● generating");
     void sc.send(text);
   }
 
