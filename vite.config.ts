@@ -107,6 +107,11 @@ function scBridge(apiKey: string): Plugin {
   const configure = (server: ViteDevServer) => {
     const root = server.config.root;
 
+    server.middlewares.use("/api/key", (req, res) => {
+      if (req.method !== "GET") return res.writeHead(405).end();
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ key: apiKey }));
+    });
+
     server.middlewares.use("/api/sc/stream", (_req, res) => {
       res.writeHead(200, {
         "Content-Type": "text/event-stream",

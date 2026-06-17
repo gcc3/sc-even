@@ -178,6 +178,12 @@ const server = createServer(async (req, res) => {
   if (req.method === "OPTIONS") return void res.writeHead(204).end();
   if (path === "/healthz") return void res.writeHead(200).end("ok");
 
+  if (path === "/api/key" && req.method === "GET") {
+    return void res
+      .writeHead(200, { "Content-Type": "application/json" })
+      .end(JSON.stringify({ key: OPENAI_API_KEY }));
+  }
+
   // SSE stream for one session's CLI output.
   if (path === "/api/sc/stream") {
     const id = url.searchParams.get("session");
