@@ -13,7 +13,11 @@ const stream = createWriteStream(LOG_FILE, { flags: "a" });
 function write(level, ...args) {
   const ts = new Date().toISOString();
   const msg = args
-    .map((a) => (typeof a === "object" ? JSON.stringify(a) : String(a)))
+    .map((a) => {
+      if (a instanceof Error) return a.stack ?? String(a);
+      if (typeof a === "object" && a !== null) return JSON.stringify(a);
+      return String(a);
+    })
     .join(" ");
   const line = `${ts} [${level}] ${msg}\n`;
   stream.write(line);
