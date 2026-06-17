@@ -17,6 +17,14 @@ if [ ! -f node_modules/@rolldown/pluginutils/dist/index.mjs ]; then
   npm ci
 fi
 
+echo "==> Copying .env.example -> .env (if .env does not exist)"
+if [ ! -f .env ]; then
+  cp .env.example .env
+  echo "    Created .env from .env.example — fill in your OPENAI_API_KEY."
+else
+  echo "    .env already exists, skipping."
+fi
+
 echo "==> Making helper scripts executable"
 chmod +x start.sh stop.sh restart.sh develop.sh setup.sh serve.sh 2>/dev/null || true
 
@@ -30,6 +38,6 @@ fi
 
 echo
 echo "Setup complete. Next:"
-echo "  1. Put your OpenAI key in .env (VITE_OPENAI_API_KEY)"
+echo "  1. Put your OpenAI key in .env (OPENAI_API_KEY)"
 echo "  2. ./develop.sh   # dev server on 0.0.0.0:5173 (+ QR for the glasses)"
 echo "     (or ./start.sh to run the sc-bridge backend under PM2)"
