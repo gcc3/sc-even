@@ -11,7 +11,7 @@
 import "./styles.css";
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import { loadSettings } from "../utils/setting";
-import { GEAR_SVG, USER_SVG, REFRESH_SVG } from "../assets/icons";
+import { GEAR_SVG, USER_SVG, REFRESH_SVG, MIC_SVG, MIC_OFF_SVG } from "../assets/icons";
 import { t, setLocale, localeFromLangCode } from "../i18n";
 import { userModalHTML, createUserModal } from "./user";
 import { settingsModalHTML, createSettingsModal, applyTheme } from "./settings";
@@ -39,6 +39,8 @@ export interface WebUIOptions {
   onRegister: (username: string, email: string, password: string) => void;
   /** User pressed the refresh button to reset the conversation and memory. */
   onRefresh: () => void;
+  /** User toggled the mute button (true = muted / mic off). */
+  onMuteChange: (muted: boolean) => void;
   /** Speech language changed (also fired once with the saved value at startup). */
   onLanguageChange: (language: string) => void;
   /** OpenAI API key changed (also fired once with the saved value at startup). */
@@ -66,6 +68,7 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
         </div>
         <div class="app__actions">
           <button class="icon-btn" data-refresh>${REFRESH_SVG}</button>
+          <button class="icon-btn" data-mute title="Mute microphone">${MIC_SVG}</button>
           <button class="icon-btn" data-open-login>${USER_SVG}</button>
           <button class="icon-btn" data-open-settings>${GEAR_SVG}</button>
         </div>
@@ -167,6 +170,17 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
 
   // --- refresh (reset conversation + memory) ------------------------------
   root.querySelector("[data-refresh]")!.addEventListener("click", () => options.onRefresh());
+
+  // --- mute button --------------------------------------------------------
+  const muteBtn = root.querySelector<HTMLButtonElement>("[data-mute]")!;
+  let muted = false;
+  muteBtn.addEventListener("click", () => {
+    muted = !muted;
+    muteBtn.innerHTML = muted ? MIC_OFF_SVG : MIC_SVG;
+    muteBtn.title = muted ? "Unmute microphone" : "Mute microphone";
+    muteBtn.classList.toggle("icon-btn--active", muted);
+    options.onMuteChange(muted);
+  });
 
   // --- login modal --------------------------------------------------------
   root.querySelector("[data-open-login]")!.addEventListener("click", () => userModal.open());

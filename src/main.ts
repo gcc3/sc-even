@@ -317,6 +317,10 @@ async function main() {
       if (enabled) void startListening();
       else void stopListening();
     },
+    onMuteChange: (muted) => {
+      if (muted) void stopListening();
+      else void startListening();
+    },
   });
 
   if (!hasApiKey()) {
