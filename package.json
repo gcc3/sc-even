@@ -20,7 +20,7 @@
   "dependencies": {
     "@evenrealities/even_hub_sdk": "^0.0.10",
     "@ricky0123/vad-web": "^0.0.30",
-    "onnxruntime-web": "^1.26.0",
+    "onnxruntime-web": "1.17.3",
     "simple-ai-chat": "^0.1.62"
   }
 }
