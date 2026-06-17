@@ -284,7 +284,7 @@ const server = createServer(async (req, res) => {
     const speech = segments.filter(
       (s) => !(s.no_speech_prob > NO_SPEECH_PROB_MAX && s.avg_logprob < AVG_LOGPROB_MIN),
     );
-    const text = (segments.length ? speech.map((s) => s.text).join("") : data.text ?? "").trim();
+    const text = (speech.length ? speech.map((s) => s.text).join("") : data.text ?? "").trim();
     log(`[transcribe] done total=${Date.now() - t0}ms segments=${segments.length} kept=${speech.length} text=${JSON.stringify(text.slice(0, 80))}`);
     return void res
       .writeHead(200, { "Content-Type": "application/json" })
