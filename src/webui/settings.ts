@@ -4,6 +4,7 @@ import { saveSettings } from "../utils/setting";
 import { t, setLocale, localeFromLangCode, getLanguages } from "../i18n";
 
 declare const __APP_VERSION__: string;
+declare const __SC_VERSION__: string;
 
 function speechLanguages() {
   return [
@@ -244,7 +245,7 @@ export function settingsModalHTML(): string {
           <button class="btn" data-close-settings data-i18n-cancel-settings>${t("btnCancel")}</button>
           <button class="btn btn--primary" data-save data-i18n-save>${t("btnSave")}</button>
         </div>
-        <div class="modal__version" data-i18n-version>${t("versionPrefix")} ${__APP_VERSION__}</div>
+        <div class="modal__version" data-i18n-version>${t("versionPrefix")} ${__APP_VERSION__} (sc ${__SC_VERSION__})</div>
       </div>
     </div>
   `;
@@ -331,7 +332,7 @@ export function createSettingsModal(
       settingsModal.querySelector("[data-i18n-saved]")!.textContent = t("savedNote");
       settingsModal.querySelector("[data-i18n-cancel-settings]")!.textContent = t("btnCancel");
       settingsModal.querySelector("[data-i18n-save]")!.textContent = t("btnSave");
-      settingsModal.querySelector("[data-i18n-version]")!.textContent = `${t("versionPrefix")} ${__APP_VERSION__}`;
+      settingsModal.querySelector("[data-i18n-version]")!.textContent = `${t("versionPrefix")} ${__APP_VERSION__} (sc ${__SC_VERSION__})`;
       languageSelect.relabel(getLanguages());
       speechLanguageSelect.relabel(speechLanguages());
       themeSelect.relabel(themes());

@@ -7,6 +7,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 // App version, surfaced in the Settings page. Read from app.json (the single
 // source of truth) and injected as a compile-time constant (see `define` below).
 const APP_VERSION: string = JSON.parse(readFileSync(new URL("./app.json", import.meta.url), "utf-8")).version;
+const SC_VERSION: string = JSON.parse(readFileSync(new URL("./node_modules/simple-ai-chat/package.json", import.meta.url), "utf-8")).version;
 
 // ---------------------------------------------------------------------------
 // sc-bridge: a dev-only backend that drives the `simple-ai-chat` CLI (`sc`).
@@ -209,6 +210,7 @@ export default defineConfig(({ mode }) => {
   base: "./",
   define: {
     __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __SC_VERSION__: JSON.stringify(SC_VERSION),
   },
   optimizeDeps: { exclude: ["onnxruntime-web"] },
   // The packaged app runs in the device's (older) WebKit, not the modern
