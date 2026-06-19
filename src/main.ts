@@ -134,7 +134,7 @@ async function main() {
           // Manually append lastPrompt to webLog so the web UI shows it.
           webLog = (webLog + lastPrompt).slice(-WEB_LOG_MAX);
         }
-        renderAll(); // show cursor immediately, regardless of whether listening starts
+        setStatus(""); // clear "● generating" and show cursor; startListening will set its own status
         void startListening();
       }
       // Flush any queued login AFTER the prompt is rendered, so echoLogin sees the
