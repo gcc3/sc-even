@@ -26,6 +26,8 @@ export interface SegmenterOptions {
    * Default 1 200 ms.
    */
   utteranceSilenceMs?: number;
+  /** Gain multiplier applied to audio before VAD. Use >1 to boost a quiet mic. Default 1. */
+  gainFactor?: number;
   onSegment: (pcm: Uint8Array) => void;
   onUtteranceEnd?: () => void;
 }
@@ -71,8 +73,8 @@ export class SpeechSegmenter {
       (frame) => model.process(frame),
       () => model.reset_state(),
       {
-        positiveSpeechThreshold: 0.5,
-        negativeSpeechThreshold: 0.35,
+        positiveSpeechThreshold: 0.08,
+        negativeSpeechThreshold: 0.04,
         preSpeechPadMs: 800,
         submitUserSpeechOnPause: false,
         redemptionMs: this.opts.silenceHangoverMs ?? 700,
@@ -85,7 +87,9 @@ export class SpeechSegmenter {
 
   push(chunk: Uint8Array): void {
     if (!this.processor) return;
-    const f32 = int16ToFloat32(chunk);
+    const raw = int16ToFloat32(chunk);
+    const gain = this.opts.gainFactor ?? 1;
+    const f32 = gain !== 1 ? raw.map((s) => Math.max(-1, Math.min(1, s * gain))) : raw;
     let offset = 0;
     while (offset < f32.length) {
       const copy = Math.min(FRAME_SAMPLES - this.frameOffset, f32.length - offset);

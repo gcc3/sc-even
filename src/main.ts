@@ -234,6 +234,7 @@ async function main() {
 
   const segmenter = new SpeechSegmenter({
     sampleRate: SAMPLE_RATE,
+    gainFactor: 20,
     onSegment: (pcm) => {
       const seq = nextSeq++;
       pendingCount++;
