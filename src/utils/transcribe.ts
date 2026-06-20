@@ -1,4 +1,4 @@
-// OpenAI Whisper transcriber — calls OpenAI directly from the client.
+// OpenAI transcriber — calls OpenAI directly from the client.
 //
 // The API key is fetched once from the sc-bridge backend (never shipped in the
 // bundle) and cached for the lifetime of the page. Subsequent transcription
@@ -37,8 +37,8 @@ export async function transcribe(pcm: Uint8Array, sampleRate: number, language?:
   const makeForm = () => {
     const form = new FormData();
     form.append("file", wavBlob, "speech.wav");
-    form.append("model", "whisper-1");
-    form.append("response_format", "verbose_json");
+    form.append("model", "gpt-4o-transcribe");
+    form.append("response_format", "json");
     if (language) form.append("language", language);
     return form;
   };

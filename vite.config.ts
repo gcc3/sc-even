@@ -161,8 +161,8 @@ function scBridge(apiKey: string): Plugin {
         const wavBuf = Buffer.from(wavBase64, "base64");
         const form = new FormData();
         form.append("file", new Blob([wavBuf], { type: "audio/wav" }), "speech.wav");
-        form.append("model", "whisper-1");
-        form.append("response_format", "verbose_json");
+        form.append("model", "gpt-4o-transcribe");
+        form.append("response_format", "json");
         if (language) form.append("language", language);
 
         const upstream = await fetch("https://api.openai.com/v1/audio/transcriptions", {

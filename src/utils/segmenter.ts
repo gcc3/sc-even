@@ -71,8 +71,8 @@ export class SpeechSegmenter {
       (frame) => model.process(frame),
       () => model.reset_state(),
       {
-        positiveSpeechThreshold: 0.15,
-        negativeSpeechThreshold: 0.1,
+        positiveSpeechThreshold: 0.5,
+        negativeSpeechThreshold: 0.35,
         preSpeechPadMs: 800,
         submitUserSpeechOnPause: false,
         redemptionMs: this.opts.silenceHangoverMs ?? 700,
