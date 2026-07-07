@@ -3,7 +3,7 @@
 // the container captures touch-bar scroll events (isEventCapture) and we page through
 // the saved session transcript ourselves — showPreviousView/showNextView walk a frozen
 // snapshot one screenful at a time, and reaching the bottom resumes following the live
-// output. A status line (e.g. "● listening") is appended at the end so it sits at the
+// output. A status line (e.g. "● recording") is appended at the end so it sits at the
 // bottom; in history a "↕ page/total" indicator takes its place.
 //
 // NOTE: this intentionally uses a SINGLE container. A previous attempt to pin the

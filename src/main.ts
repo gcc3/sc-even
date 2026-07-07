@@ -2,13 +2,22 @@ import { waitForEvenAppBridge, OsEventTypeList, EventSourceType } from "@evenrea
 import { createDisplay } from "./glassesui/glasses";
 import { createWebUI, type WebUI } from "./webui/webui";
 import { connectSc } from "./services/sc";
-import { SpeechSegmenter } from "./utils/segmenter";
 import { transcribe } from "./utils/transcribe";
+import { int16ToFloat32, float32ToInt16 } from "./utils/audio";
 import { trailingPrompt, stripTrailingPrompt } from "./utils/text";
 
 const SAMPLE_RATE = 16000;
 const TERMINAL_MAX = 4000;
 const WEB_LOG_MAX = 100000;
+
+// Push-to-talk: a tap starts recording, a second tap stops it and submits.
+// Safety cap so a forgotten mic doesn't record forever — at this point the
+// recording is stopped and submitted as if the user had tapped.
+const MAX_RECORDING_MS = 60000;
+// Discard clips shorter than this (accidental double taps, no real speech).
+const MIN_RECORDING_MS = 250;
+// Gain multiplier applied before transcription — the glasses mic is quiet.
+const GAIN_FACTOR = 20;
 
 async function main() {
   const bridge = await waitForEvenAppBridge();
@@ -24,9 +33,8 @@ async function main() {
   let lastPrompt = "";
 
   let generating = false;
-  let listening = false;
   let transcriptionEnabled = true;
-  let segmenterReady = false;
+  let micMuted = false;
 
   // Set to true on reset so that stale in-flight chunks from the previous
   // generation are discarded until the server's :reset reply arrives.
@@ -65,37 +73,101 @@ async function main() {
     renderAll();
   }
 
-  async function startListening() {
-    if (!transcriptionEnabled) return;
-    // Voice transcription needs the OpenAI key. Never enable the mic or show
-    // "listening" without one — guard here so every caller (startup, and onReady
-    // after a typed exchange) is covered.
-    if (!segmenterReady) {
-      setStatus("● loading VAD");
-      try {
-        await segmenter.init();
-        segmenterReady = true;
-      } catch (err) {
-        console.error("Segmenter init failed:", err);
-        setStatus("● VAD init failed");
-        return;
-      }
-      if (!transcriptionEnabled) return; // disabled while loading
-    }
+  // --- push-to-talk recorder ----------------------------------------------
+  // The mic is off by default. A glasses tap opens it and raw PCM chunks are
+  // accumulated here; a second tap (or the MAX_RECORDING_MS cap) closes the mic
+  // and the whole clip is transcribed in one request, then submitted.
+  let recording = false;
+  let recordedChunks: Uint8Array[] = [];
+  let recordedBytes = 0;
+  let recordingTimer = 0;
 
-    const isMicReady = await bridge.audioControl(true);
-    if (!transcriptionEnabled) return; // disabled while waiting for audioControl
-
-    listening = isMicReady;
-    setStatus(isMicReady ? "● listening" : "● mic failed");
+  // Status shown when the app is idle and ready for a tap.
+  function idleStatus(): string {
+    return transcriptionEnabled && !micMuted ? "● tap to talk" : "";
   }
 
-  async function stopListening() {
-    listening = false;
-    utteranceDone = false;
-    pendingSegments.clear();
-    setStatus("");
-    await bridge.audioControl(false);
+  // Show a transient status, then fall back to the idle hint.
+  function flashStatus(text: string, durationMs = 2000) {
+    setStatus(text);
+    window.setTimeout(() => {
+      if (statusText === text && !recording && !generating) setStatus(idleStatus());
+    }, durationMs);
+  }
+
+  async function startRecording() {
+    if (recording || generating || !transcriptionEnabled || micMuted) return;
+    recording = true;
+    recordedChunks = [];
+    recordedBytes = 0;
+    setStatus("● recording");
+    const isMicReady = await bridge.audioControl(true);
+    if (!recording) return; // cancelled while waiting for audioControl
+    if (!isMicReady) {
+      recording = false;
+      flashStatus("● mic failed");
+      return;
+    }
+    recordingTimer = window.setTimeout(() => void finishRecording(), MAX_RECORDING_MS);
+  }
+
+  // Stop the mic and submit whatever was captured.
+  async function finishRecording() {
+    if (!recording) return;
+    recording = false;
+    window.clearTimeout(recordingTimer);
+    void bridge.audioControl(false);
+
+    const pcm = new Uint8Array(recordedBytes);
+    let offset = 0;
+    for (const chunk of recordedChunks) {
+      pcm.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    recordedChunks = [];
+    recordedBytes = 0;
+
+    const minBytes = (MIN_RECORDING_MS / 1000) * SAMPLE_RATE * 2;
+    if (pcm.byteLength < minBytes) {
+      setStatus(idleStatus());
+      return;
+    }
+
+    setStatus("● transcribing");
+    try {
+      const text = await transcribe(applyGain(pcm), SAMPLE_RATE, sttLanguage || undefined);
+      // State moved on while transcribing (typed submit, new recording, typing
+      // in progress) — typing and newer input take over, so drop the result.
+      if (generating || recording) return;
+      if (draft) {
+        setStatus(idleStatus());
+        return;
+      }
+      if (text) ask(text);
+      else flashStatus("● no speech");
+    } catch (err) {
+      console.error("transcribe error:", err);
+      flashStatus("● transcribe failed");
+    }
+  }
+
+  // Stop the mic and discard the captured audio (typing took over, reset, mute…).
+  // Callers set their own status afterwards.
+  function cancelRecording() {
+    if (!recording) return;
+    recording = false;
+    window.clearTimeout(recordingTimer);
+    recordedChunks = [];
+    recordedBytes = 0;
+    void bridge.audioControl(false);
+  }
+
+  function applyGain(pcm: Uint8Array): Uint8Array {
+    const f32 = int16ToFloat32(pcm);
+    for (let i = 0; i < f32.length; i++) {
+      f32[i] = Math.max(-1, Math.min(1, f32[i] * GAIN_FACTOR));
+    }
+    return float32ToInt16(f32);
   }
 
   // Auto-login is deferred until the CLI is ready: a login sent before the `sc`
@@ -104,11 +176,6 @@ async function main() {
   let scReady = false;
   let pendingLogin: { username: string; password: string } | null = null;
   let pendingLangCommand: string | null = null;
-
-  // Glasses single-tap confirmation state: first tap shows a prompt, second
-  // tap within the window confirms the reset.
-  let pendingReset = false;
-  let pendingResetTimer = 0;
 
   const sc = connectSc({
     onChunk: (text) => {
@@ -134,8 +201,7 @@ async function main() {
           // Manually append lastPrompt to webLog so the web UI shows it.
           webLog = (webLog + lastPrompt).slice(-WEB_LOG_MAX);
         }
-        setStatus(""); // clear "● generating" and show cursor; startListening will set its own status
-        void startListening();
+        setStatus(idleStatus()); // clear "● generating", show the tap-to-talk hint
       }
       // Flush any queued login AFTER the prompt is rendered, so echoLogin sees the
       // correct lastPrompt and the "gpt-5.5>" line appears before the :login echo.
@@ -161,7 +227,7 @@ async function main() {
     const stripped = stripTrailingPrompt(webLog);
     webLog = (stripped + `${lastPrompt}${text}\n`).slice(-WEB_LOG_MAX);
     generating = true;
-    void stopListening(); // clears the status; set "generating" after so it wins
+    cancelRecording(); // a typed submit while recording discards the mic capture
     setStatus("● generating");
     void sc.send(text);
   }
@@ -174,7 +240,7 @@ async function main() {
     const stripped = stripTrailingPrompt(webLog);
     webLog = (stripped + `${lastPrompt}${line}`).slice(-WEB_LOG_MAX);
     generating = true;
-    void stopListening();
+    cancelRecording();
     setStatus("");
   }
 
@@ -186,7 +252,7 @@ async function main() {
     const stripped = stripTrailingPrompt(webLog);
     webLog = (stripped + `${lastPrompt}${line}`).slice(-WEB_LOG_MAX);
     generating = true;
-    void stopListening();
+    cancelRecording();
     setStatus("");
   }
 
@@ -197,82 +263,10 @@ async function main() {
     display.followLive();
     generating = true; // suppress lastPrompt appending until onReady fires
     discardChunks = true; // drop in-flight chunks from the previous generation
-    void stopListening();
+    cancelRecording();
     setStatus("");
     emit(":help for help\n\n");
     void sc.send(":reset");
-  }
-
-  // Accumulate transcribed segments and submit them together once all in-flight
-  // transcriptions for a single utterance are done.
-  let nextSeq = 0;
-  let pendingCount = 0;
-  let utteranceDone = false; // set by onUtteranceEnd; gates submission
-  const pendingSegments = new Map<number, string>(); // seq → transcribed text
-
-  // Submit only when the segmenter has signalled end-of-utterance AND all
-  // in-flight transcriptions have completed. This prevents a race where the
-  // first segment's transcription finishes before the second segment is even
-  // queued, causing a single sentence to be sent as two separate messages.
-  function trySubmit() {
-    if (pendingCount > 0) return;
-    if (!utteranceDone) return;
-    utteranceDone = false;
-    if (pendingSegments.size > 0) {
-      const combined = [...pendingSegments.entries()]
-        .sort(([a], [b]) => a - b)
-        .map(([, t]) => t)
-        .join(" ");
-      pendingSegments.clear();
-      ask(combined);
-      return;
-    }
-    // Nothing to submit (silence / unintelligible audio) — resume listening
-    // unless the AI is already generating a response.
-    if (!generating) void startListening();
-  }
-
-  const segmenter = new SpeechSegmenter({
-    sampleRate: SAMPLE_RATE,
-    gainFactor: 20,
-    onSegment: (pcm) => {
-      const seq = nextSeq++;
-      pendingCount++;
-      void handleSegment(pcm, seq);
-    },
-    onUtteranceEnd: () => {
-      // Stop the mic immediately — the utterance is done. Preserve pendingSegments
-      // and utteranceDone so in-flight transcriptions can still complete and submit.
-      listening = false;
-      void bridge.audioControl(false);
-      utteranceDone = true;
-      trySubmit();
-    },
-  });
-
-  async function handleSegment(pcm: Uint8Array, seq: number) {
-    if (!listening) {
-      pendingCount--;
-      return;
-    }
-
-    setStatus("● transcribing");
-    try {
-      const text = await transcribe(pcm, SAMPLE_RATE, sttLanguage || undefined);
-      if (!listening && !utteranceDone) {
-        // Full stop (e.g. user started typing): discard. But if utteranceDone is
-        // true we only paused the mic — let this transcription complete and submit.
-        pendingCount--;
-        if (pendingCount === 0) pendingSegments.clear();
-        return;
-      }
-      if (text) pendingSegments.set(seq, text);
-    } catch (err) {
-      console.error("transcribe error:", err);
-    }
-
-    pendingCount--;
-    trySubmit();
   }
 
   ui = await createWebUI(bridge, {
@@ -281,10 +275,12 @@ async function main() {
     onInput: (text) => {
       draft = text;
       if (text) display.followLive();
-      // Typing takes over from the mic: stop listening on the first keystroke so a
-      // typed message isn't competing with captured speech. Resume when cleared.
-      if (text && listening) void stopListening();
-      else if (!text && !listening && !generating) void startListening();
+      // Typing takes over from the mic: discard an in-progress recording on the
+      // first keystroke so a typed message isn't competing with captured speech.
+      if (text && recording) {
+        cancelRecording();
+        setStatus(idleStatus());
+      }
       renderAll();
     },
     // Manual login (button) goes through immediately — the CLI is already idle by
@@ -313,14 +309,18 @@ async function main() {
     },
     onTranscriptionChange: (enabled) => {
       transcriptionEnabled = enabled;
-      if (enabled) void startListening();
-      else void stopListening();
+      if (!enabled) cancelRecording();
+      if (!generating) setStatus(idleStatus());
     },
     onMuteChange: (muted) => {
-      if (muted) void stopListening();
-      else void startListening();
+      micMuted = muted;
+      if (muted) cancelRecording();
+      if (!generating) setStatus(idleStatus());
     },
   });
+
+  // Callbacks above may have set the status before `ui` existed — sync it now.
+  ui.setStatus(statusText);
 
   // Even app bridge events
   bridge.onEvenHubEvent((event) => {
@@ -338,33 +338,24 @@ async function main() {
       return;
     }
 
-    // Single-tap
+    // Single-tap — push-to-talk.
     // Arrives as a sysEvent with only an `eventSource` and no `eventType`
-    // — the host doesn't emit CLICK_EVENT for it. First tap shows a confirmation
-    // prompt; a second tap within 3 s confirms the reset.
+    // — the host doesn't emit CLICK_EVENT for it. (The glasses OS reserves
+    // long-press, so a tap is the only press gesture available to the app.)
+    //   idle       → start recording
+    //   recording  → stop recording, transcribe the clip, submit
+    //   generating → ignored
     const eventSource = event.sysEvent?.eventSource;
     if (eventType == null && eventSource != null && eventSource !== EventSourceType.TOUCH_EVENT_FORM_DUMMY_NULL) {
-      if (pendingReset) {
-        window.clearTimeout(pendingResetTimer);
-        pendingReset = false;
-        reset();
-      } else {
-        pendingReset = true;
-        const savedStatus = statusText;
-        setStatus("Tap again to reset");
-        pendingResetTimer = window.setTimeout(() => {
-          pendingReset = false;
-          setStatus(savedStatus);
-        }, 3000);
-      }
+      if (recording) void finishRecording();
+      else if (!generating) void startRecording();
       return;
     }
 
-    // Double-tap
-    // Asks the host to raise its exit confirmation dialog; actual teardown
-    // happens when SYSTEM_EXIT_EVENT fires below.
+    // Double-tap — reset the conversation (works in any state; also cancels an
+    // in-progress recording or generation output).
     if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT) {
-      void requestExit();
+      reset();
       return;
     }
 
@@ -377,18 +368,18 @@ async function main() {
     // Audio PCM (Pulse-Code Modulation)
     const pcm = event.audioEvent?.audioPcm;
     if (pcm && pcm.byteLength > 0) {
-      if (!listening) return;
-      segmenter.push(pcm);
+      if (!recording) return;
+      // Copy — the bridge may reuse the underlying buffer between events.
+      recordedChunks.push(pcm.slice());
+      recordedBytes += pcm.byteLength;
     }
   });
 
-  // Exit
-  async function requestExit() {
-    await bridge.shutDownPageContainer(1); // 1 = show the "exit?" interaction layer
-  }
-
+  // Exit — no in-app gesture triggers this anymore (double-tap now resets);
+  // the host still fires SYSTEM_EXIT_EVENT when the user exits via the glasses OS.
   async function shutdown() {
-    await stopListening();
+    cancelRecording();
+    await bridge.audioControl(false);
     await bridge.shutDownPageContainer(0); // 0 = exit immediately (post-confirmation cleanup)
   }
 }
