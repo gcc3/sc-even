@@ -34,7 +34,6 @@ async function main() {
 
   let generating = false;
   let transcriptionEnabled = true;
-  let micMuted = false;
 
   // Set to true on reset so that stale in-flight chunks from the previous
   // generation are discarded until the server's :reset reply arrives.
@@ -84,7 +83,7 @@ async function main() {
 
   // Status shown when the app is idle and ready for a tap.
   function idleStatus(): string {
-    return transcriptionEnabled && !micMuted ? "● tap to talk" : "";
+    return transcriptionEnabled ? "● tap to talk" : "";
   }
 
   // Show a transient status, then fall back to the idle hint.
@@ -96,7 +95,7 @@ async function main() {
   }
 
   async function startRecording() {
-    if (recording || generating || !transcriptionEnabled || micMuted) return;
+    if (recording || generating || !transcriptionEnabled) return;
     recording = true;
     recordedChunks = [];
     recordedBytes = 0;
@@ -151,7 +150,7 @@ async function main() {
     }
   }
 
-  // Stop the mic and discard the captured audio (typing took over, reset, mute…).
+  // Stop the mic and discard the captured audio (typing took over, reset…).
   // Callers set their own status afterwards.
   function cancelRecording() {
     if (!recording) return;
@@ -312,11 +311,6 @@ async function main() {
       if (!enabled) cancelRecording();
       if (!generating) setStatus(idleStatus());
     },
-    onMuteChange: (muted) => {
-      micMuted = muted;
-      if (muted) cancelRecording();
-      if (!generating) setStatus(idleStatus());
-    },
   });
 
   // Callbacks above may have set the status before `ui` existed — sync it now.
@@ -352,13 +346,6 @@ async function main() {
       return;
     }
 
-    // Double-tap — reset the conversation (works in any state; also cancels an
-    // in-progress recording or generation output).
-    if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT) {
-      reset();
-      return;
-    }
-
     // System exit
     if (eventType === OsEventTypeList.SYSTEM_EXIT_EVENT || eventType === OsEventTypeList.ABNORMAL_EXIT_EVENT) {
       void shutdown();
@@ -375,8 +362,8 @@ async function main() {
     }
   });
 
-  // Exit — no in-app gesture triggers this anymore (double-tap now resets);
-  // the host still fires SYSTEM_EXIT_EVENT when the user exits via the glasses OS.
+  // Exit — no in-app gesture triggers this; the host fires SYSTEM_EXIT_EVENT
+  // when the user exits via the glasses OS.
   async function shutdown() {
     cancelRecording();
     await bridge.audioControl(false);
