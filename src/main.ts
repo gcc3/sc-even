@@ -346,6 +346,15 @@ async function main() {
       return;
     }
 
+    // Important: this is required, and if don't handle it will be rejected by the review.
+    // Double-tap — standard app UX: at the root page (this app's only page) it
+    // asks the host to pop the exit dialogue; the user confirms or cancels there.
+    // A confirmed exit comes back as SYSTEM_EXIT_EVENT, handled below.
+    if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT) {
+      void bridge.shutDownPageContainer(1); // 1 = show exit confirmation layer
+      return;
+    }
+
     // System exit
     if (eventType === OsEventTypeList.SYSTEM_EXIT_EVENT || eventType === OsEventTypeList.ABNORMAL_EXIT_EVENT) {
       void shutdown();
@@ -362,8 +371,8 @@ async function main() {
     }
   });
 
-  // Exit — no in-app gesture triggers this; the host fires SYSTEM_EXIT_EVENT
-  // when the user exits via the glasses OS.
+  // Exit — the host fires SYSTEM_EXIT_EVENT when the user exits via the glasses
+  // OS, including after confirming the double-tap exit dialogue above.
   async function shutdown() {
     cancelRecording();
     await bridge.audioControl(false);
