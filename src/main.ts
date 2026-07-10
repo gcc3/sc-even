@@ -99,7 +99,7 @@ async function main() {
     recording = true;
     recordedChunks = [];
     recordedBytes = 0;
-    setStatus("● recording");
+    setStatus("● recording · tap to stop");
     const isMicReady = await bridge.audioControl(true);
     if (!recording) return; // cancelled while waiting for audioControl
     if (!isMicReady) {
