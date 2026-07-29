@@ -1,0 +1,105 @@
+/* The sc terminal page. The scrollback, the prompt and the line being typed are one text
+   box, so the caret sits after the prompt the way it does in a real terminal. */
+
+/* The CLI's themes, from simple-ai-chat's utils/themeUtils.js — the page needs three colours
+   out of each: the background, the text, and the muted tone for anything that isn't the
+   session itself. `light` is the default, as it is there. */
+:root {
+  --bg: #ffffff;
+  --fg: #000000;
+  --muted: #767676;
+}
+
+:root[data-theme="dark"] {
+  --bg: #111111;
+  --fg: #c7c7c7;
+  --muted: #9a9a9a;
+}
+
+:root[data-theme="terminal"] {
+  --bg: #000000;
+  --fg: #00f700;
+  --muted: #007000;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The terminal is the window: it fills it on load and follows every resize. */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  /* Nothing to scroll past the box, so no rubber-banding either. */
+  overscroll-behavior: none;
+}
+
+/* A mobile toolbar takes its bite out of the viewport, and `100%` measures the one without
+   it — so the box would end short. dvh is the height actually on screen; browsers that
+   don't know it keep the `100%` above. */
+body {
+  height: 100dvh;
+}
+
+/* Monochrome per theme, rather than the browser's blue over a green-on-black terminal. */
+::selection {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+#terminal {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: none;
+  resize: none;
+  padding: 16px;
+  background: transparent;
+  color: inherit;
+  caret-color: var(--fg);
+  font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+  /* Scrolls, but without a scrollbar drawing a second colour on the page */
+  scrollbar-width: none;
+}
+
+#terminal::-webkit-scrollbar {
+  display: none;
+}
+
+/* A disabled field is the browser's cue to paint its own grey; the page keeps its own
+   colours and says what is going on with the notice instead. */
+#terminal:disabled {
+  background: transparent;
+  color: var(--muted);
+  -webkit-text-fill-color: var(--muted);
+}
+
+/* Waiting on the server, or nothing there to wait on: said in the middle of the page, not
+   written into the session. */
+#notice {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  text-align: center;
+  font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+  color: var(--muted);
+  background: var(--bg);
+}
+
+#notice[hidden] {
+  display: none;
+}

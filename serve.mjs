@@ -39,9 +39,16 @@ const ROOT = process.cwd();
 const SC_CMD = process.env.SC_CMD || join(ROOT, "node_modules", ".bin", "sc");
 const ALLOW_ORIGIN = process.env.SC_ALLOW_ORIGIN || "*";
 const SESSION_TTL = Number(process.env.SC_SESSION_TTL) || 120000;
-// Next to this file, not under cwd: the page ships with the server, so it is found however
-// the server was started.
-const PAGE = new URL("./web/index.html", import.meta.url);
+// The terminal page and the files it pulls in. A fixed list rather than a static directory:
+// this is all there is to serve, so nothing else under web/ is reachable by guessing a path.
+// Resolved next to this file, not under cwd, so they are found however the server was started.
+const STATIC = new Map([
+  ["/", ["web/index.html", "text/html; charset=utf-8"]],
+  ["/index.html", ["web/index.html", "text/html; charset=utf-8"]],
+  ["/style.css", ["web/style.css", "text/css; charset=utf-8"]],
+  ["/boot.js", ["web/boot.js", "text/javascript; charset=utf-8"]],
+  ["/app.js", ["web/app.js", "text/javascript; charset=utf-8"]],
+]);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
 
 // Strip ANSI escape codes (colors, cursor moves, `ESC c`). Same pattern as
@@ -194,14 +201,14 @@ const server = createServer(async (req, res) => {
   if (req.method === "OPTIONS") return void res.writeHead(204).end();
   if (path === "/healthz") return void res.writeHead(200).end("ok");
 
-  // The terminal page. Read per request (it's one small file) so editing it doesn't need
-  // a restart.
-  if ((path === "/" || path === "/index.html") && req.method === "GET") {
+  // The terminal page. Read per request (they are small files) so editing one doesn't need a
+  // restart.
+  const asset = req.method === "GET" ? STATIC.get(path) : undefined;
+  if (asset) {
+    const [file, type] = asset;
     try {
-      const html = readFileSync(PAGE);
-      return void res
-        .writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" })
-        .end(html);
+      const body = readFileSync(new URL(`./${file}`, import.meta.url));
+      return void res.writeHead(200, { "Content-Type": type, "Cache-Control": "no-cache" }).end(body);
     } catch {
       return void res.writeHead(404).end("not found");
     }
