@@ -11,7 +11,8 @@
 //      stdin. Output is sent only to that session's clients — never broadcast.
 //   2. CORS enabled, since the app and this server are on different origins.
 //
-// Endpoints (all under /api/sc):
+// Endpoints:
+//   GET  /                                            -> web/index.html, a terminal page
 //   GET  /api/sc/stream?session=<id>                  -> SSE; the CLI's stdout
 //   POST /api/sc/send   { session, text }             -> write a line to the CLI
 //   POST /api/sc/login  { session, username, password } -> `:login <u> <p>`
@@ -29,7 +30,7 @@
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { join } from "node:path";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { logRequest } from "./src/utils/logUtils.mjs";
 
@@ -38,6 +39,9 @@ const ROOT = process.cwd();
 const SC_CMD = process.env.SC_CMD || join(ROOT, "node_modules", ".bin", "sc");
 const ALLOW_ORIGIN = process.env.SC_ALLOW_ORIGIN || "*";
 const SESSION_TTL = Number(process.env.SC_SESSION_TTL) || 120000;
+// Next to this file, not under cwd: the page ships with the server, so it is found however
+// the server was started.
+const PAGE = new URL("./web/index.html", import.meta.url);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
 
 // Strip ANSI escape codes (colors, cursor moves, `ESC c`). Same pattern as
@@ -172,6 +176,19 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "OPTIONS") return void res.writeHead(204).end();
   if (path === "/healthz") return void res.writeHead(200).end("ok");
+
+  // The terminal page. Read per request (it's one small file) so editing it doesn't need
+  // a restart.
+  if ((path === "/" || path === "/index.html") && req.method === "GET") {
+    try {
+      const html = readFileSync(PAGE);
+      return void res
+        .writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" })
+        .end(html);
+    } catch {
+      return void res.writeHead(404).end("not found");
+    }
+  }
 
   if (path === "/api/key" && req.method === "GET") {
     return void res

@@ -31,7 +31,7 @@ PORT="${PORT:-8787}"
 SC_TMP="$(node -e 'process.stdout.write(require("os").tmpdir())')"
 echo "==> Session storage: $SC_TMP/sc-home-*/.simple   (per session, removed on reap/shutdown)"
 
-echo "==> sc-bridge on http://localhost:$PORT"
+echo "==> sc-bridge on http://localhost:$PORT   (open it for the terminal page)"
 
 # Public URL the glasses should point at. Prefer PUBLIC_HOST; otherwise look up
 # the box's public IP (falling back to a LAN IP if there's no outbound network).

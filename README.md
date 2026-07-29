@@ -22,6 +22,10 @@ Manage
 sc-bridge API
 -------------
 
+`GET /`  
+The terminal page.  
+Open `http://localhost:8787/`.  
+
 `GET /healthz`  
 Health check. Returns `ok`.
 
