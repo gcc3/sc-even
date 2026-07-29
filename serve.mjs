@@ -86,6 +86,15 @@ function broadcast(session, event, data) {
   for (const res of session.clients) res.write(payload);
 }
 
+// A stream waiting for the user to type sends nothing, and a proxy in front of this server
+// reads that as a dead upstream (nginx cuts it after 60s by default). An SSE comment every
+// HEARTBEAT ms is ignored by the client and keeps the connection accounted for as alive.
+const HEARTBEAT = 20000;
+const heartbeat = setInterval(() => {
+  for (const s of sessions.values()) for (const res of s.clients) res.write(": ping\n\n");
+}, HEARTBEAT);
+heartbeat.unref();
+
 function handleStdout(session, raw) {
   session.buf += stripAnsi(raw);
 
@@ -205,6 +214,11 @@ const server = createServer(async (req, res) => {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
+      // For a reverse proxy in front of this server (nginx buffers upstream responses by
+      // default): a buffered event stream is delivered only once the buffer fills, and a
+      // prompt-sized chunk never fills it — so the client would wait forever. nginx honours
+      // this header per response, which saves configuring the location itself.
+      "X-Accel-Buffering": "no",
     });
     res.write("retry: 2000\n\n");
 
