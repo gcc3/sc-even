@@ -5,7 +5,12 @@
 //   POST /api/sc/send   { session, text }   write one line to the CLI's stdin
 
 const el = document.getElementById("terminal");
+const mirror = document.getElementById("mirror");
 const notice = document.getElementById("notice");
+
+// The block the src draws at the end of the output (src/webui/styles.css, .term--cursor), and
+// like it: static, no blink.
+const CURSOR = "█";
 
 // Which sc process on the server this page talks to. Kept in sessionStorage so a reload
 // lands back in the same conversation (the server holds an idle process for SC_SESSION_TTL
@@ -87,6 +92,13 @@ function savedTheme() {
 // off the flash; this settles the rest of it.
 applyTheme(savedTheme());
 
+// Repeat into #mirror whatever the box holds, plus the cursor — which is there when the CLI
+// is idle and waiting for a line, and gone while it is answering, as it is in src.
+function sync() {
+  mirror.textContent = el.value + (live && !busy ? CURSOR : "");
+  mirror.scrollTop = el.scrollTop;
+}
+
 function paint() {
   // Rewriting .value parks the caret at the end, which is where a terminal keeps it. A
   // reader who has selected text to copy is left alone.
@@ -96,6 +108,7 @@ function paint() {
   el.value = log + draft;
   if (hadRange) el.setSelectionRange(from, to);
   if (stick) el.scrollTop = el.scrollHeight;
+  sync();
 }
 
 function append(text) {
@@ -111,6 +124,7 @@ function setPhase(phase, message) {
   notice.hidden = live;
   if (!live) notice.textContent = message;
   else if (document.activeElement !== el) el.focus();
+  sync();
 }
 
 async function post(path, body) {
@@ -130,13 +144,15 @@ function submit() {
   const line = draft.trim();
   if (!line || busy || !live) return;
   draft = "";
-  append(`${forScrollback(line)}\n`);
   // Repainted here, and still sent on: the CLI is what remembers the choice (and syncs it to
   // a logged-in account). A name it doesn't know is left for it to complain about.
   const theme = themeFrom(line);
   if (theme) applyTheme(theme);
+  // Set before the echo, so the line appears without a cursor after it: from here until the
+  // CLI's prompt comes back, it is the CLI's turn.
   busy = true;
   stick = true;
+  append(`${forScrollback(line)}\n`);
   void post("/api/sc/send", { text: line }).then((res) => {
     if (res.error) {
       busy = false;
@@ -155,6 +171,8 @@ el.addEventListener("input", () => {
   }
   // A pasted block would otherwise become several stdin lines.
   draft = next.slice(log.length).replace(/[\r\n]+/g, " ");
+  // The box already holds the keystroke; this is the mirror catching up with it.
+  sync();
 });
 
 el.addEventListener("keydown", (e) => {
@@ -168,6 +186,7 @@ el.addEventListener("keydown", (e) => {
 
 el.addEventListener("scroll", () => {
   stick = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  mirror.scrollTop = el.scrollTop;
 });
 
 const source = new EventSource(`/api/sc/stream?session=${encodeURIComponent(session)}`);

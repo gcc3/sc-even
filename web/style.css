@@ -45,28 +45,47 @@ body {
   height: 100dvh;
 }
 
-/* Monochrome per theme, rather than the browser's blue over a green-on-black terminal. */
-::selection {
-  background: var(--fg);
-  color: var(--bg);
-}
-
-#terminal {
-  display: block;
+#screen {
+  position: relative;
   width: 100%;
   height: 100%;
-  border: 0;
-  outline: none;
-  resize: none;
+}
+
+/* The two layers are one apparent box, so every property that decides where a glyph lands
+   has to hold for both of them — font, size, line height, padding, wrapping. Anything set
+   on one alone is what would make the copies drift apart. */
+#mirror,
+#terminal {
+  position: absolute;
+  inset: 0;
   padding: 16px;
-  background: transparent;
-  color: inherit;
-  caret-color: var(--fg);
   font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 14px;
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* What is actually read: the session, and the block cursor at the end of it. */
+#mirror {
+  margin: 0;
+  color: var(--fg);
+  overflow: hidden;
+  /* The text here is a copy. Selecting and clicking belong to the box on top. */
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Invisible, but the real thing: it holds the text, takes the typing, and scrolls. */
+#terminal {
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  /* The cursor is drawn in #mirror, so the browser's own caret would be a second one. */
+  caret-color: transparent;
   overflow-y: auto;
   /* Scrolls, but without a scrollbar drawing a second colour on the page */
   scrollbar-width: none;
@@ -76,12 +95,10 @@ body {
   display: none;
 }
 
-/* A disabled field is the browser's cue to paint its own grey; the page keeps its own
-   colours and says what is going on with the notice instead. */
-#terminal:disabled {
-  background: transparent;
-  color: var(--muted);
-  -webkit-text-fill-color: var(--muted);
+/* Monochrome per theme rather than the browser's blue — and see-through, because the glyphs
+   a selection covers are in the layer below it. */
+#terminal::selection {
+  background: color-mix(in srgb, var(--fg) 30%, transparent);
 }
 
 /* Waiting on the server, or nothing there to wait on: said in the middle of the page, not

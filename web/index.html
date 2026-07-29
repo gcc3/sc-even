@@ -34,14 +34,20 @@
     />
   </head>
   <body>
-    <textarea
-      id="terminal"
-      spellcheck="false"
-      autocomplete="off"
-      autocapitalize="off"
-      aria-label="sc terminal"
-      disabled
-    ></textarea>
+    <!-- The terminal is drawn twice, because a textarea can carry neither a ::after nor a
+         block caret: #mirror paints the text and the cursor, #terminal lies on top of it with
+         invisible glyphs and does the typing, selecting and scrolling. -->
+    <div id="screen">
+      <pre id="mirror" aria-hidden="true"></pre>
+      <textarea
+        id="terminal"
+        spellcheck="false"
+        autocomplete="off"
+        autocapitalize="off"
+        aria-label="sc terminal"
+        disabled
+      ></textarea>
+    </div>
     <div id="notice">starting sc…</div>
 
     <script type="module" src="/app.js"></script>
