@@ -39,9 +39,10 @@ Send a message to the CLI. Body: `{ session, text }`.
 Log in to the sc account. Body: `{ session, username, password }`.
 
 
-Behind a reverse proxy
-----------------------
+Troubleshooting
+---------------
 
+Behind a reverse proxy  
 The output is SSE, so buffering has to be off — a buffered stream is delivered only once the
 buffer fills, and a prompt-sized chunk never fills it. The server says so itself
 (`X-Accel-Buffering: no`, which nginx honours) and sends a comment every 20s so an idle
