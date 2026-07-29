@@ -73,6 +73,14 @@ function applyTheme(theme) {
   }
 }
 
+// Whether a line wipes the screen. `:clear` clears the CLI's own with an escape code
+// (cli.js writes `\x1Bc`) that the bridge strips out on its way here, so it would otherwise
+// pass unnoticed; `:reset` starts the conversation over. The web app treats the two the same
+// (pages/index.js: clearInput + clearOutput), and so does this.
+function clears(line) {
+  return /^:(clear|reset)\b/i.test(line);
+}
+
 /** The theme a `:theme <name>` line asks for, or "" for anything else. */
 function themeFrom(line) {
   const name = line.match(/^:theme\s+(\S+)\s*$/i)?.[1]?.toLowerCase() ?? "";
@@ -112,7 +120,9 @@ function paint() {
 }
 
 function append(text) {
-  log = cap(log + text);
+  // The CLI puts a blank line before each prompt, which on an empty screen is a blank first
+  // line — after a clear, the prompt belongs at the top of the page.
+  log = cap(log + (log ? text : text.replace(/^[\r\n]+/, "")));
   const next = trailingPrompt(text);
   if (next) prompt = next;
   paint();
@@ -152,7 +162,14 @@ function submit() {
   // CLI's prompt comes back, it is the CLI's turn.
   busy = true;
   stick = true;
-  append(`${forScrollback(line)}\n`);
+  // A line that clears takes the screen with it, itself included — the way it goes in a
+  // terminal. What the CLI prints next, its prompt, is then the whole page.
+  if (clears(line)) {
+    log = "";
+    paint();
+  } else {
+    append(`${forScrollback(line)}\n`);
+  }
   void post("/api/sc/send", { text: line }).then((res) => {
     if (res.error) {
       busy = false;
