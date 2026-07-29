@@ -58,7 +58,7 @@ const stripAnsi = (s) => s.replace(ANSI, "");
 // `ready`.
 const PROMPT_AT_END = /[\r\n]*[A-Za-z0-9_.\-]*>[ \t]$/;
 
-// session id -> { child, clients, buf, home, killTimer }
+// session id -> { child, clients, buf, prompt, home, killTimer }
 const sessions = new Map();
 
 function getSession(id) {
@@ -73,6 +73,8 @@ function getSession(id) {
       child: null,
       clients: new Set(),
       buf: "",
+      // The prompt the CLI last left on screen, for a client that arrives after it.
+      prompt: "",
       home,
       killTimer: null,
     };
@@ -81,9 +83,12 @@ function getSession(id) {
   return s;
 }
 
+function writeEvent(res, event, data) {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
 function broadcast(session, event, data) {
-  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-  for (const res of session.clients) res.write(payload);
+  for (const res of session.clients) writeEvent(res, event, data);
 }
 
 // A stream waiting for the user to type sends nothing, and a proxy in front of this server
@@ -104,6 +109,9 @@ function handleStdout(session, raw) {
     // marker to fire `ready` (the CLI is idle).
     broadcast(session, "chunk", session.buf);
     broadcast(session, "ready", "");
+    // Remembered without the newlines that precede it, so it can be handed to a client
+    // that connects later as the one line it needs.
+    session.prompt = m[0].replace(/^[\r\n]+/, "");
     session.buf = "";
     return;
   }
@@ -222,11 +230,21 @@ const server = createServer(async (req, res) => {
     });
     res.write("retry: 2000\n\n");
 
+    // Whether this client is joining a CLI that is already up, in which case its banner is
+    // long gone — it went to the page that has since been closed or reloaded.
+    const resumed = Boolean(sessions.get(id)?.child);
     const s = ensureChild(id);
     s.clients.add(res);
     if (s.killTimer) {
       clearTimeout(s.killTimer);
       s.killTimer = null;
+    }
+    // So give it the prompt the CLI last printed, and only to it. Everything a freshly
+    // spawned CLI prints arrives on its own, so there is nothing to say in that case — and
+    // nothing for the client to guess at either.
+    if (resumed && s.prompt) {
+      writeEvent(res, "chunk", s.prompt);
+      writeEvent(res, "ready", "");
     }
     req.on("close", () => {
       s.clients.delete(res);

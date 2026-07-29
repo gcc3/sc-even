@@ -255,13 +255,6 @@
         // behind it, and both have to be said out loud or the page waits forever.
         if (source.readyState !== EventSource.OPEN) setPhase("down", "no answer from the sc server");
       });
-
-      // A reload that resumed a still-running sc gets no banner — that went to the page
-      // we just replaced — so there is nothing on screen to type at. `:info` is a cheap
-      // way to ask for a fresh prompt (and it says which session and model this is).
-      setTimeout(() => {
-        if (!log && source.readyState === EventSource.OPEN) void post("/api/sc/send", { text: ":info" });
-      }, 1500);
     </script>
   </body>
 </html>
