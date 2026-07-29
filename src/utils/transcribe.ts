@@ -7,7 +7,7 @@
 import { pcm16ToWav } from "./audio";
 import { hasSpeech } from "./speech";
 
-const SC_SERVER_BASE_URL = "http://159.223.204.39:8787";
+const SC_SERVER_BASE_URL = "https://cli.simple-ai.io";
 
 const NO_SPEECH_PROB_MAX = 0.6;
 const AVG_LOGPROB_MIN = -1.0;
@@ -73,10 +73,8 @@ export async function transcribe(pcm: Uint8Array, sampleRate: number, language?:
   };
 
   const segments = data.segments ?? [];
-  const speech = segments.filter(
-    (s) => !(s.no_speech_prob > NO_SPEECH_PROB_MAX && s.avg_logprob < AVG_LOGPROB_MIN),
-  );
-  const text = (speech.length ? speech.map((s) => s.text).join("") : data.text ?? "").trim();
+  const speech = segments.filter((s) => !(s.no_speech_prob > NO_SPEECH_PROB_MAX && s.avg_logprob < AVG_LOGPROB_MIN));
+  const text = (speech.length ? speech.map((s) => s.text).join("") : (data.text ?? "")).trim();
   console.log("[transcribe] result:", JSON.stringify({ text, segments: segments.length, kept: speech.length }));
   return text;
 }

@@ -1,8 +1,7 @@
 // PM2 process config for the sc-bridge backend (serve.mjs).
 //
 // serve.mjs runs the `sc` (simple-ai-chat) CLI behind HTTP/SSE so the published
-// glasses app can reach it. The app talks to a fixed host (see SC_SERVER_BASE_URL
-// in src/utils/scUtils.ts: http://159.223.204.39:8787/), so this listens on 8787.
+// glasses app can reach it.
 //
 // Usage:
 //   pm2 start ecosystem.config.cjs        # start
