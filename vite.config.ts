@@ -8,7 +8,9 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 // App version, surfaced in the Settings page. Read from app.json (the single
 // source of truth) and injected as a compile-time constant (see `define` below).
 const APP_VERSION: string = JSON.parse(readFileSync(new URL("./app.json", import.meta.url), "utf-8")).version;
-const SC_VERSION: string = JSON.parse(readFileSync(new URL("./node_modules/simple-ai-chat/package.json", import.meta.url), "utf-8")).version;
+const SC_VERSION: string = JSON.parse(
+  readFileSync(new URL("./node_modules/simple-ai-chat/package.json", import.meta.url), "utf-8"),
+).version;
 
 // ---------------------------------------------------------------------------
 // sc-bridge: a dev-only backend that drives the `simple-ai-chat` CLI (`sc`).
@@ -47,6 +49,12 @@ function esc(s: string): string {
 // detected, `ready` never fires, and the startup output stays held in the buffer
 // (leaving the glasses blank until the first reply).
 const PROMPT_AT_END = /[\r\n]*[A-Za-z0-9_.\-]*>[ \t]$/;
+
+// Dev capture dump: on unless .env turns it off with SAVE_RECORDINGS=false.
+// Set once from the .env read in the config factory below and read directly by
+// the recording middleware. Vite restarts the dev server when .env changes, so
+// this is re-evaluated on every edit — no stale value to worry about.
+let saveRecordings = false;
 
 function scBridge(apiKey: string): Plugin {
   let child: ChildProcessWithoutNullStreams | null = null;
@@ -154,9 +162,9 @@ function scBridge(apiKey: string): Plugin {
     server.middlewares.use("/api/transcribe", (req, res) => {
       if (req.method !== "POST") return res.writeHead(405).end();
       if (!apiKey) {
-        res.writeHead(503, { "Content-Type": "application/json" }).end(
-          JSON.stringify({ error: "OPENAI_API_KEY not set in .env" }),
-        );
+        res
+          .writeHead(503, { "Content-Type": "application/json" })
+          .end(JSON.stringify({ error: "OPENAI_API_KEY not set in .env" }));
         return;
       }
       void readJson(req).then(async ({ wav: wavBase64, language }: { wav?: string; language?: string }) => {
@@ -178,9 +186,9 @@ function scBridge(apiKey: string): Plugin {
         });
         if (!upstream.ok) {
           const detail = await upstream.text().catch(() => "");
-          res.writeHead(upstream.status, { "Content-Type": "application/json" }).end(
-            JSON.stringify({ error: detail.slice(0, 200) }),
-          );
+          res
+            .writeHead(upstream.status, { "Content-Type": "application/json" })
+            .end(JSON.stringify({ error: detail.slice(0, 200) }));
           return;
         }
         const data = (await upstream.json()) as {
@@ -190,10 +198,8 @@ function scBridge(apiKey: string): Plugin {
         const NO_SPEECH_PROB_MAX = 0.6;
         const AVG_LOGPROB_MIN = -1.0;
         const segments = data.segments ?? [];
-        const speech = segments.filter(
-          (s) => !(s.no_speech_prob > NO_SPEECH_PROB_MAX && s.avg_logprob < AVG_LOGPROB_MIN),
-        );
-        const text = (speech.length ? speech.map((s) => s.text).join("") : data.text ?? "").trim();
+        const speech = segments.filter((s) => !(s.no_speech_prob > NO_SPEECH_PROB_MAX && s.avg_logprob < AVG_LOGPROB_MIN));
+        const text = (speech.length ? speech.map((s) => s.text).join("") : (data.text ?? "")).trim();
         res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ text }));
       });
     });
@@ -202,8 +208,14 @@ function scBridge(apiKey: string): Plugin {
     // The client POSTs every captured clip here and we drop it in `recordings/`,
     // so a bad transcript can be listened to instead of guessed at. Browse and
     // play them at /api/recordings. See src/utils/recorder.ts for the client half.
+    //
+    // Turned off with SAVE_RECORDINGS=false in .env — the client stops sending
+    // and this endpoint stops accepting. The listing stays available either way,
+    // so clips captured earlier can still be played back.
     const recordingsDir = join(root, "recordings");
     const SAFE_NAME = /^[A-Za-z0-9._-]+$/;
+
+    if (!saveRecordings) console.log("[recording] off (SAVE_RECORDINGS=false) — clips are not saved");
 
     const readBody = (req: IncomingMessage): Promise<Buffer> =>
       new Promise((resolve) => {
@@ -214,6 +226,7 @@ function scBridge(apiKey: string): Plugin {
 
     server.middlewares.use("/api/recording", (req, res) => {
       if (req.method !== "POST") return res.writeHead(405).end();
+      if (!saveRecordings) return res.writeHead(403).end('{"error":"SAVE_RECORDINGS=false"}');
       const params = new URL(req.url ?? "/", "http://localhost").searchParams;
       const name = `${params.get("id") ?? "clip"}-${params.get("tag") ?? "raw"}.${params.get("ext") ?? "wav"}`;
       if (!SAFE_NAME.test(name)) return res.writeHead(400).end();
@@ -241,7 +254,10 @@ function scBridge(apiKey: string): Plugin {
           return;
         }
 
-        const wavs = files.filter((f) => f.endsWith(".wav")).sort().reverse();
+        const wavs = files
+          .filter((f) => f.endsWith(".wav"))
+          .sort()
+          .reverse();
         const items = await Promise.all(
           wavs.map(async (f) => {
             const id = f.replace(/-[^-]*\.wav$/, "");
@@ -285,20 +301,22 @@ function scBridge(apiKey: string): Plugin {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+  saveRecordings = !/^(false|0|no|off)$/i.test((env.SAVE_RECORDINGS ?? "").trim());
   return {
-  base: "./",
-  define: {
-    __APP_VERSION__: JSON.stringify(APP_VERSION),
-    __SC_VERSION__: JSON.stringify(SC_VERSION),
-  },
-  // The packaged app runs in the device's (older) WebKit, not the modern
-  // simulator. Target an older Safari so the build keeps/adds vendor prefixes
-  // like -webkit-appearance — without this the minifier drops them and controls
-  // (e.g. the input vs. enter button) render at native sizes on-device only.
-  build: { cssTarget: "safari13", target: "safari13" },
-  server: {
-    host: "0.0.0.0",
-  },
-  plugins: [scBridge(env.OPENAI_API_KEY ?? "")],
+    base: "./",
+    define: {
+      __APP_VERSION__: JSON.stringify(APP_VERSION),
+      __SC_VERSION__: JSON.stringify(SC_VERSION),
+      __SAVE_RECORDINGS__: JSON.stringify(saveRecordings),
+    },
+    // The packaged app runs in the device's (older) WebKit, not the modern
+    // simulator. Target an older Safari so the build keeps/adds vendor prefixes
+    // like -webkit-appearance — without this the minifier drops them and controls
+    // (e.g. the input vs. enter button) render at native sizes on-device only.
+    build: { cssTarget: "safari13", target: "safari13" },
+    server: {
+      host: "0.0.0.0",
+    },
+    plugins: [scBridge(env.OPENAI_API_KEY ?? "")],
   };
 });

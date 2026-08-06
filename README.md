@@ -59,6 +59,9 @@ The console also logs `peak` / `rms` / `clipped%` per clip. The mic runs hot (pe
 full scale on normal speech), so no gain is applied — an earlier ×20 stage clipped ~15% of
 samples and wrecked accuracy. If `clipped%` is ever non-trivial, that is the problem.
 
+To stop saving clips, set `SAVE_RECORDINGS=false` in `.env`. The dev server restarts on the
+change and the listing stays browsable, so clips captured earlier can still be played.
+
 Dev-only — the code is compiled out of the packaged build (`import.meta.env.DEV`).
 
 

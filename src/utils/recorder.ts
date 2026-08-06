@@ -9,10 +9,17 @@
 // The clip is saved exactly as it goes to the transcription API, so what you
 // hear is what the model heard.
 //
-// `import.meta.env.DEV` is a compile-time constant, so this whole module is
-// eliminated from the packaged build.
+// To stop saving clips, put `SAVE_RECORDINGS=false` in .env — vite restarts the
+// dev server on the change, so it applies to the next tap. Both flags below are
+// compile-time constants, so with either one off this whole module is eliminated
+// from the bundle (and it is always off in the packaged build).
 
 import { pcm16ToWav } from "./audio";
+
+/** Injected by vite from SAVE_RECORDINGS in .env; see `define` in vite.config.ts. */
+declare const __SAVE_RECORDINGS__: boolean;
+
+const enabled = import.meta.env.DEV && __SAVE_RECORDINGS__;
 
 const BYTES_PER_SAMPLE = 2;
 
@@ -57,7 +64,7 @@ async function post(path: string, contentType: string, body: BodyInit): Promise<
 // Save one clip as `recordings/<id>-clip.wav`. Never throws: a failed dump
 // must not break the transcription it was meant to help debug.
 export async function saveRecording(id: string, pcm: Uint8Array, sampleRate: number): Promise<void> {
-  if (!import.meta.env.DEV) return;
+  if (!enabled) return;
   try {
     const wav = pcm16ToWav(pcm, sampleRate);
     const { peak, rms, clipped } = levels(pcm);
@@ -75,7 +82,7 @@ export async function saveRecording(id: string, pcm: Uint8Array, sampleRate: num
 // Sidecar `recordings/<id>-text.txt`, shown next to the player in the listing —
 // so the audio and what came back from the API sit side by side.
 export async function saveRecordingNote(id: string, note: string): Promise<void> {
-  if (!import.meta.env.DEV) return;
+  if (!enabled) return;
   try {
     await post(`/api/recording?id=${encodeURIComponent(id)}&tag=text&ext=txt`, "text/plain", note);
   } catch (err) {
