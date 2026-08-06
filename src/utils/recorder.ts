@@ -61,16 +61,26 @@ async function post(path: string, contentType: string, body: BodyInit): Promise<
   await fetch(path, { method: "POST", headers: { "Content-Type": contentType }, body });
 }
 
-// Save one clip as `recordings/<id>-clip.wav`. Never throws: a failed dump
+// Save one clip as `recordings/<id>-<tag>.wav`. Never throws: a failed dump
 // must not break the transcription it was meant to help debug.
-export async function saveRecording(id: string, pcm: Uint8Array, sampleRate: number): Promise<void> {
+//
+// Each tap saves two files: `-raw` straight off the mic and `-clip` after
+// enhanceCapture, which is the one actually sent. They sit next to each other
+// in the listing, so what the conditioning did can be heard rather than argued
+// about — and the logged peak/rms/clipped% of the pair is the A/B.
+export async function saveRecording(
+  id: string,
+  pcm: Uint8Array,
+  sampleRate: number,
+  tag: "raw" | "clip" = "clip",
+): Promise<void> {
   if (!enabled) return;
   try {
     const wav = pcm16ToWav(pcm, sampleRate);
     const { peak, rms, clipped } = levels(pcm);
-    await post(`/api/recording?id=${encodeURIComponent(id)}&tag=clip&ext=wav`, "audio/wav", wav);
+    await post(`/api/recording?id=${encodeURIComponent(id)}&tag=${tag}&ext=wav`, "audio/wav", wav);
     console.log(
-      `[recording] ${id}-clip.wav ` +
+      `[recording] ${id}-${tag}.wav ` +
         `${clipSeconds(pcm, sampleRate).toFixed(1)}s ${(wav.size / 1024) | 0}KB ` +
         `peak=${peak.toFixed(3)} rms=${rms.toFixed(4)} clipped=${(clipped * 100).toFixed(1)}%`,
     );

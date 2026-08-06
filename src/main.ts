@@ -3,6 +3,7 @@ import { createDisplay } from "./glassesui/glasses";
 import { createWebUI, type WebUI } from "./webui/webui";
 import { connectSc } from "./services/sc";
 import { transcribe } from "./utils/transcribe";
+import { enhanceCapture } from "./utils/audio";
 import { newRecordingId, clipSeconds, saveRecording, saveRecordingNote } from "./utils/recorder";
 import { trailingPrompt, stripTrailingPrompt } from "./utils/text";
 
@@ -115,26 +116,31 @@ async function main() {
     window.clearTimeout(recordingTimer);
     void bridge.audioControl(false);
 
-    const pcm = new Uint8Array(recordedBytes);
+    const raw = new Uint8Array(recordedBytes);
     let offset = 0;
     for (const chunk of recordedChunks) {
-      pcm.set(chunk, offset);
+      raw.set(chunk, offset);
       offset += chunk.byteLength;
     }
     recordedChunks = [];
     recordedBytes = 0;
 
     const minBytes = (MIN_RECORDING_MS / 1000) * SAMPLE_RATE * 2;
-    if (pcm.byteLength < minBytes) {
+    if (raw.byteLength < minBytes) {
       setStatus(idleStatus());
       return;
     }
+
+    // Denoise and lift the clip before anything else sees it, so the dump, the
+    // silence check and the transcription all work off the same audio.
+    const pcm = enhanceCapture(raw, SAMPLE_RATE);
 
     setStatus("● transcribing");
     // Dev only (compiled out of the packaged build): dump the clip so a bad
     // transcript can be listened to at <dev-server>/api/recordings.
     const clipId = newRecordingId();
-    void saveRecording(clipId, pcm, SAMPLE_RATE);
+    void saveRecording(clipId, raw, SAMPLE_RATE, "raw");
+    void saveRecording(clipId, pcm, SAMPLE_RATE, "clip");
     const noteHead = `${clipSeconds(pcm, SAMPLE_RATE).toFixed(1)}s · lang ${sttLanguage || "auto"}\n`;
     try {
       const text = await transcribe(pcm, SAMPLE_RATE, sttLanguage || undefined);
