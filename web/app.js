@@ -2,6 +2,7 @@
 // lines typed into it. The bridge it talks to is the server that served this file:
 //
 //   GET  /api/sc/stream?session=<id>   `chunk` events, and `ready` at every prompt
+//   GET  /api/sc/history?session=<id>  the commands the CLI has run, for ↑
 //   POST /api/sc/send   { session, text }   write one line to the CLI's stdin
 
 const el = document.getElementById("terminal");
@@ -34,6 +35,18 @@ let prompt = "";
 let live = false;
 // Whether new output should scroll into view — false while the reader has scrolled up.
 let stick = true;
+
+// The commands this session's CLI has run, newest first, as it wrote them down itself
+// (simple-ai-chat's pushCommandHistory). Only `:` commands are in it, there as here: what ↑
+// brings back is a command, not a sentence said to the model.
+let cmdHistory = [];
+// How far back ↑ has walked: -1 is the line being typed, 0 the most recent command.
+let historyIndex = -1;
+// The half-typed line ↑ was pressed on, kept so walking ↓ back off the end returns to it.
+let pending = "";
+// Whether the CLI has run a command since the history was last read. It changes at no other
+// time, so a reply — which is most of what `ready` fires for — is not worth a request.
+let historyStale = true;
 
 // Keep the scrollback bounded, cutting at a line break so the top stays readable.
 const MAX_CHARS = 200000;
@@ -150,10 +163,41 @@ async function post(path, body) {
   }
 }
 
+async function loadHistory() {
+  try {
+    const res = await fetch(`/api/sc/history?session=${encodeURIComponent(session)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data.history)) cmdHistory = data.history;
+  } catch {
+    // A terminal whose history can't be read still types; ↑ is the only thing lost, and
+    // saying so on screen would be louder than the miss is worth.
+  }
+}
+
+/** Walk `step` entries back (+1) or forward (-1) through the command history. */
+function recall(step) {
+  const next = historyIndex + step;
+  // -1 is the line being typed and the end of the list is the end of it: neither wraps.
+  if (next < -1 || next >= cmdHistory.length) return;
+  // Leaving the typed line: keep it, because ↓ is how it comes back.
+  if (historyIndex === -1) pending = draft;
+  historyIndex = next;
+  draft = next === -1 ? pending : cmdHistory[next];
+  stick = true;
+  paint();
+}
+
 function submit() {
   const line = draft.trim();
   if (!line || busy || !live) return;
   draft = "";
+  // The line is spoken for, so ↑ starts again from the newest command — and the draft it was
+  // holding on to is gone with it. A command is about to join the history, so re-read it once
+  // the CLI is done writing it down (i.e. at the next prompt).
+  historyIndex = -1;
+  pending = "";
+  if (line.startsWith(":")) historyStale = true;
   // Repainted here, and still sent on: the CLI is what remembers the choice (and syncs it to
   // a logged-in account). A name it doesn't know is left for it to complain about.
   const theme = themeFrom(line);
@@ -199,6 +243,17 @@ el.addEventListener("keydown", (e) => {
     e.preventDefault();
     submit();
   }
+
+  // ↑ and ↓ walk the command history, as they do in a shell. They are taken whether or not
+  // there is anything to recall: the box holds the whole scrollback, so the caret moving up
+  // into it — what they would otherwise do — is never what was meant. A modifier is left
+  // alone, so the browser's own ⌘↑ / Shift↓ still work. An IME uses them to pick a
+  // candidate, and gets them while it is composing.
+  const arrow = e.key === "ArrowUp" ? 1 : e.key === "ArrowDown" ? -1 : 0;
+  if (arrow && !e.isComposing && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+    e.preventDefault();
+    if (live && !busy) recall(arrow);
+  }
 });
 
 el.addEventListener("scroll", () => {
@@ -218,6 +273,13 @@ source.addEventListener("chunk", (e) => {
 source.addEventListener("ready", () => {
   busy = false;
   setPhase("live");
+  // The prompt is back, so whatever command was running has been written to the history by
+  // now. The first `ready` always reads it: a reload lands back in the same session, and the
+  // commands typed before it are still the ones ↑ should reach.
+  if (historyStale) {
+    historyStale = false;
+    void loadHistory();
+  }
 });
 
 source.addEventListener("error", () => {

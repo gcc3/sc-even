@@ -20,6 +20,7 @@
 // Endpoints:
 //   GET  /                                            -> web/index.html, a terminal page
 //   GET  /api/sc/stream?session=<id>                  -> SSE; the CLI's stdout
+//   GET  /api/sc/history?session=<id>                 -> the CLI's command history
 //   POST /api/sc/send   { session, text }             -> write a line to the CLI
 //   POST /api/sc/login  { session, username, password } -> `:login <u> <p>`
 //   GET  /healthz                                     -> "ok"
@@ -124,6 +125,33 @@ function tagWithClientIp(line, ip) {
   const clean = line.replace(IP_TAG, " ").trim();
   if (!ip || !clean || clean.startsWith(":") || clean.startsWith("!")) return clean;
   return `${clean} @ip[${ip}]`;
+}
+
+// Where the CLI keeps its command history. node-localstorage (which is what simple-ai-chat
+// gives its `localStorage` under Node) writes one file per key into $HOME/.simple/.scratch,
+// and the `history` key holds a JSON array of the `:` commands it has run — newest first,
+// the latest 100. Each session has its own HOME, so this is that session's history and no
+// one else's.
+const historyFile = (home) => join(home, ".simple", ".scratch", "history");
+
+// Commands whose arguments are a password. simple-ai-chat means to keep these out of the
+// history and doesn't (pushCommandHistory hands isCommandMusked the whole line, which it
+// compares against a bare command name, so the test never passes) — its own scratch file
+// has `:login <user> <password>` sitting in it in the clear. They are dropped here instead:
+// the terminal page masks a password on its way into the scrollback, and handing it one back
+// through ↑ would undo that.
+const SECRET = /^:(login|user\s+(set\s+pass|add|join))\b/i;
+
+function readHistory(home) {
+  try {
+    const parsed = JSON.parse(readFileSync(historyFile(home), "utf-8"));
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((c) => typeof c === "string" && !SECRET.test(c));
+  } catch {
+    // No file yet (this session has run no commands), or something that isn't the array we
+    // expect. Either way there is no history to offer.
+    return [];
+  }
 }
 
 function writeEvent(res, event, data) {
@@ -298,6 +326,19 @@ const server = createServer(async (req, res) => {
       }
     });
     return;
+  }
+
+  // The session's command history, newest first — what ↑ walks back through on the terminal
+  // page. Read off disk per request rather than tracked here: the CLI is the one that decides
+  // what counts as a command and what a repeat collapses to, and it has already written the
+  // answer down. An unknown session is not an error, just an empty history; the process is
+  // spawned by /api/sc/stream, and asking about one that never started is answerable.
+  if (path === "/api/sc/history" && req.method === "GET") {
+    const id = url.searchParams.get("session");
+    const s = id ? sessions.get(id) : undefined;
+    return void res
+      .writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" })
+      .end(JSON.stringify({ history: s ? readHistory(s.home) : [] }));
   }
 
   if (path === "/api/sc/send" && req.method === "POST") {

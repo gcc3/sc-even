@@ -3,7 +3,7 @@ import { createDisplay } from "./glassesui/glasses";
 import { createWebUI, type WebUI } from "./webui/webui";
 import { connectSc } from "./services/sc";
 import { transcribe } from "./utils/transcribe";
-import { int16ToFloat32, float32ToInt16 } from "./utils/audio";
+import { newRecordingId, clipSeconds, saveRecording, saveRecordingNote } from "./utils/recorder";
 import { trailingPrompt, stripTrailingPrompt } from "./utils/text";
 
 const SAMPLE_RATE = 16000;
@@ -16,8 +16,6 @@ const WEB_LOG_MAX = 100000;
 const MAX_RECORDING_MS = 60000;
 // Discard clips shorter than this (accidental double taps, no real speech).
 const MIN_RECORDING_MS = 250;
-// Gain multiplier applied before transcription — the glasses mic is quiet.
-const GAIN_FACTOR = 20;
 
 async function main() {
   const bridge = await waitForEvenAppBridge();
@@ -133,8 +131,14 @@ async function main() {
     }
 
     setStatus("● transcribing");
+    // Dev only (compiled out of the packaged build): dump the clip so a bad
+    // transcript can be listened to at <dev-server>/api/recordings.
+    const clipId = newRecordingId();
+    void saveRecording(clipId, pcm, SAMPLE_RATE);
+    const noteHead = `${clipSeconds(pcm, SAMPLE_RATE).toFixed(1)}s · lang ${sttLanguage || "auto"}\n`;
     try {
-      const text = await transcribe(applyGain(pcm), SAMPLE_RATE, sttLanguage || undefined);
+      const text = await transcribe(pcm, SAMPLE_RATE, sttLanguage || undefined);
+      void saveRecordingNote(clipId, `${noteHead}${text || "(no text returned)"}`);
       // State moved on while transcribing (typed submit, new recording, typing
       // in progress) — typing and newer input take over, so drop the result.
       if (generating || recording) return;
@@ -146,6 +150,7 @@ async function main() {
       else flashStatus("● no speech");
     } catch (err) {
       console.error("transcribe error:", err);
+      void saveRecordingNote(clipId, `${noteHead}[error] ${String(err)}`);
       flashStatus("● transcribe failed");
     }
   }
@@ -159,14 +164,6 @@ async function main() {
     recordedChunks = [];
     recordedBytes = 0;
     void bridge.audioControl(false);
-  }
-
-  function applyGain(pcm: Uint8Array): Uint8Array {
-    const f32 = int16ToFloat32(pcm);
-    for (let i = 0; i < f32.length; i++) {
-      f32[i] = Math.max(-1, Math.min(1, f32[i] * GAIN_FACTOR));
-    }
-    return float32ToInt16(f32);
   }
 
   // Auto-login is deferred until the CLI is ready: a login sent before the `sc`

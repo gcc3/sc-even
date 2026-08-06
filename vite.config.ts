@@ -2,6 +2,7 @@ import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from "vite";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { join } from "node:path";
 import { readFileSync } from "node:fs";
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 // App version, surfaced in the Settings page. Read from app.json (the single
@@ -32,6 +33,11 @@ const ANSI = new RegExp(
 );
 function stripAnsi(s: string): string {
   return s.replace(ANSI, "");
+}
+
+// Escape for interpolation into the recordings listing page below.
+function esc(s: string): string {
+  return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c] as string);
 }
 
 // The interactive prompt looks like `gpt-5.5> ` at the very end of a chunk once
@@ -190,6 +196,79 @@ function scBridge(apiKey: string): Plugin {
         const text = (speech.length ? speech.map((s) => s.text).join("") : data.text ?? "").trim();
         res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ text }));
       });
+    });
+
+    // --- recording dump (dev only) ------------------------------------------
+    // The client POSTs every captured clip here and we drop it in `recordings/`,
+    // so a bad transcript can be listened to instead of guessed at. Browse and
+    // play them at /api/recordings. See src/utils/recorder.ts for the client half.
+    const recordingsDir = join(root, "recordings");
+    const SAFE_NAME = /^[A-Za-z0-9._-]+$/;
+
+    const readBody = (req: IncomingMessage): Promise<Buffer> =>
+      new Promise((resolve) => {
+        const chunks: Buffer[] = [];
+        req.on("data", (c: Buffer) => chunks.push(c));
+        req.on("end", () => resolve(Buffer.concat(chunks)));
+      });
+
+    server.middlewares.use("/api/recording", (req, res) => {
+      if (req.method !== "POST") return res.writeHead(405).end();
+      const params = new URL(req.url ?? "/", "http://localhost").searchParams;
+      const name = `${params.get("id") ?? "clip"}-${params.get("tag") ?? "raw"}.${params.get("ext") ?? "wav"}`;
+      if (!SAFE_NAME.test(name)) return res.writeHead(400).end();
+      void readBody(req).then(async (body) => {
+        await mkdir(recordingsDir, { recursive: true });
+        await writeFile(join(recordingsDir, name), body);
+        console.log(`[recording] recordings/${name} (${(body.byteLength / 1024) | 0} KB)`);
+        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: true, name }));
+      });
+    });
+
+    // GET /api/recordings            — index page with a player per clip
+    // GET /api/recordings/<file>     — the file itself
+    server.middlewares.use("/api/recordings", (req, res) => {
+      if (req.method !== "GET") return res.writeHead(405).end();
+      const path = decodeURIComponent((req.url ?? "/").split("?")[0]).replace(/^\//, "");
+      void (async () => {
+        const files = await readdir(recordingsDir).catch(() => [] as string[]);
+
+        if (path) {
+          if (!SAFE_NAME.test(path) || !files.includes(path)) return res.writeHead(404).end("not found");
+          const body = await readFile(join(recordingsDir, path));
+          const type = path.endsWith(".wav") ? "audio/wav" : "text/plain; charset=utf-8";
+          res.writeHead(200, { "Content-Type": type, "Cache-Control": "no-store" }).end(body);
+          return;
+        }
+
+        const wavs = files.filter((f) => f.endsWith(".wav")).sort().reverse();
+        const items = await Promise.all(
+          wavs.map(async (f) => {
+            const id = f.replace(/-[^-]*\.wav$/, "");
+            const size = (await stat(join(recordingsDir, f))).size;
+            const note = await readFile(join(recordingsDir, `${id}-text.txt`), "utf-8").catch(() => "");
+            return (
+              `<li><div class="n">${esc(f)} <span class="s">${(size / 1024) | 0} KB</span></div>` +
+              `<audio controls preload="none" src="/api/recordings/${encodeURIComponent(f)}"></audio>` +
+              (note ? `<pre class="t">${esc(note)}</pre>` : "") +
+              `</li>`
+            );
+          }),
+        );
+
+        const html =
+          `<!doctype html><meta charset="utf-8"><title>recordings</title>` +
+          `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+          `<style>body{font:14px/1.5 ui-monospace,Menlo,monospace;margin:0;padding:16px;` +
+          `background:#111;color:#ddd}h1{font-size:16px;margin:0 0 4px}p{color:#888;margin:0 0 16px}` +
+          `ul{list-style:none;padding:0;margin:0}li{border-top:1px solid #262626;padding:12px 0}` +
+          `.n{margin-bottom:6px}.s{color:#777}audio{width:100%;max-width:520px;display:block}` +
+          `.t{white-space:pre-wrap;color:#8fc;margin:8px 0 0;font:inherit}a{color:#6af}</style>` +
+          `<h1>recordings <a href="/api/recordings">↻</a></h1>` +
+          `<p>${wavs.length} clip(s) · exactly what was sent to the transcription API</p>` +
+          (items.length ? `<ul>${items.join("")}</ul>` : `<p>nothing captured yet — tap to talk on the glasses.</p>`);
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" }).end(html);
+      })();
     });
 
     const cleanup = () => child?.kill();

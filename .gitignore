@@ -29,3 +29,6 @@ dist-ssr
 glasses*.png
 public/
 
+# Dev speech captures (see /api/recordings)
+recordings/
+

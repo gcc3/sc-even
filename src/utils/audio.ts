@@ -3,31 +3,6 @@
 const BYTES_PER_SAMPLE = 2; // 16-bit
 const NUM_CHANNELS = 1; // mono
 
-// Convert 16-bit LE PCM to normalized Float32 in [-1, 1].
-export function int16ToFloat32(buf: Uint8Array): Float32Array {
-  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
-  const count = Math.floor(buf.byteLength / BYTES_PER_SAMPLE);
-  const out = new Float32Array(count);
-  for (let i = 0; i < count; i++) {
-    out[i] = view.getInt16(i * BYTES_PER_SAMPLE, true) / 32768;
-  }
-  return out;
-}
-
-// Convert normalized Float32 [-1, 1] back to 16-bit LE PCM.
-export function float32ToInt16(f32: Float32Array): Uint8Array {
-  const out = new Uint8Array(f32.length * BYTES_PER_SAMPLE);
-  const view = new DataView(out.buffer);
-  for (let i = 0; i < f32.length; i++) {
-    view.setInt16(
-      i * BYTES_PER_SAMPLE,
-      Math.max(-32768, Math.min(32767, Math.round(f32[i] * 32768))),
-      true,
-    );
-  }
-  return out;
-}
-
 // Wrap raw 16-bit LE mono PCM in a minimal WAV container so it can be POSTed
 // to a REST transcription endpoint.
 export function pcm16ToWav(pcm: Uint8Array, sampleRate: number): Blob {
