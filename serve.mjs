@@ -11,6 +11,12 @@
 //      stdin. Output is sent only to that session's clients — never broadcast.
 //   2. CORS enabled, since the app and this server are on different origins.
 //
+// Because the CLI runs here, every request it makes to the Simple AI backend originates
+// from this machine — so the backend would record this server's address (127.0.0.1 when
+// the two are co-located) for every user. Ordinary messages are therefore tagged with the
+// sender's address as `@ip[...]`, in the same in-band style as the CLI's `+image[...]`,
+// and the backend reads it off and strips it. See tagWithClientIp.
+//
 // Endpoints:
 //   GET  /                                            -> web/index.html, a terminal page
 //   GET  /api/sc/stream?session=<id>                  -> SSE; the CLI's stdout
@@ -88,6 +94,36 @@ function getSession(id) {
     sessions.set(id, s);
   }
   return s;
+}
+
+// The address of whoever made this request, as seen through whatever proxy sits in front
+// of us. X-Forwarded-For accumulates one hop per proxy, oldest first, so the original
+// client is the first entry; X-Real-IP is nginx's single-value equivalent; the socket
+// covers a direct connection. "::ffff:1.2.3.4" is an IPv4 address in IPv6 form — unwrap it
+// so the backend stores the same dotted-quad it stores for a browser.
+function clientIp(req) {
+  const xff = req.headers["x-forwarded-for"];
+  const forwarded = (Array.isArray(xff) ? xff[0] : xff || "").split(",")[0].trim();
+  const ip = forwarded || req.headers["x-real-ip"] || req.socket.remoteAddress || "";
+  return String(ip).replace(/^::ffff:/, "");
+}
+
+const IP_TAG = /\s*@ip\[[^\]]*\]\s*/g;
+
+// Tag a line with the address it came from, for the backend to record.
+//
+// Commands (":login ...") and function calls ("!foo()") are parsed by their first
+// character and then by argument position, so a tag on one is read as part of the command
+// — appending to `:login u p` makes the tag a third argument, and prepending stops it
+// being seen as a command at all. Those go through untouched, which is why a bridged
+// `:login` is still recorded against this server rather than the user.
+//
+// Any tag the user typed is dropped first: the address has to be the one we observed, not
+// one they can claim by typing it.
+function tagWithClientIp(line, ip) {
+  const clean = line.replace(IP_TAG, " ").trim();
+  if (!ip || !clean || clean.startsWith(":") || clean.startsWith("!")) return clean;
+  return `${clean} @ip[${ip}]`;
 }
 
 function writeEvent(res, event, data) {
@@ -268,7 +304,7 @@ const server = createServer(async (req, res) => {
     const { session, text } = await readJson(req);
     if (session) {
       const s = ensureChild(session);
-      const line = String(text ?? "").trim();
+      const line = tagWithClientIp(String(text ?? "").trim(), clientIp(req));
       if (line) writeLine(s, line);
     }
     return void res.writeHead(200, { "Content-Type": "application/json" }).end(`{"ok":true}`);
