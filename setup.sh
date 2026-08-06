@@ -21,6 +21,7 @@ echo "==> Copying .env.example -> .env (if .env does not exist)"
 if [ ! -f .env ]; then
   cp .env.example .env
   echo "    Created .env from .env.example — fill in your OPENAI_API_KEY."
+  echo "    PORT and PM2_NAME are preset there; change them to run more than one instance."
 else
   echo "    .env already exists, skipping."
 fi

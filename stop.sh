@@ -14,8 +14,13 @@ if ! command -v pm2 >/dev/null 2>&1; then
   exit 0
 fi
 
+# The process name comes from PM2_NAME in .env; passing the ecosystem file lets
+# PM2 resolve it, so this only needs the name for the message.
+PM2_NAME="$(grep -m1 '^PM2_NAME=' .env 2>/dev/null | cut -d= -f2- || true)"
+PM2_NAME="${PM2_NAME:-sc-bridge}"
+
 if [ "${1:-}" = "--delete" ]; then
-  pm2 delete ecosystem.config.cjs && echo "==> sc-bridge stopped and removed from PM2."
+  pm2 delete ecosystem.config.cjs && echo "==> $PM2_NAME stopped and removed from PM2."
 else
-  pm2 stop ecosystem.config.cjs && echo "==> sc-bridge stopped (still in PM2 list; ./start.sh to resume)."
+  pm2 stop ecosystem.config.cjs && echo "==> $PM2_NAME stopped (still in PM2 list; ./start.sh to resume)."
 fi

@@ -25,5 +25,7 @@ if [ -f .env ]; then
   set -a && source .env && set +a
 fi
 
-echo "==> Restarting sc-bridge"
-pm2 restart ecosystem.config.cjs --update-env && echo "==> sc-bridge restarted."
+PM2_NAME="${PM2_NAME:-sc-bridge}"
+
+echo "==> Restarting $PM2_NAME"
+pm2 restart ecosystem.config.cjs --update-env && echo "==> $PM2_NAME restarted."

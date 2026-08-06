@@ -37,8 +37,13 @@ fi
 # reloads it in place — so re-running this after a deploy just redeploys.
 pm2 startOrReload ecosystem.config.cjs
 
+# Name and port live in .env (see .env.example); ecosystem.config.cjs reads the
+# same two values, these are only for the summary below.
+PM2_NAME="$(grep -m1 '^PM2_NAME=' .env 2>/dev/null | cut -d= -f2- || true)"
+PORT="$(grep -m1 '^PORT=' .env 2>/dev/null | cut -d= -f2- || true)"
+
 pm2 list
 echo
-echo "==> sc-bridge is running under PM2."
-echo "    Logs:    pm2 logs sc-bridge"
+echo "==> ${PM2_NAME:-sc-bridge} is running under PM2 on port ${PORT:-8787}."
+echo "    Logs:    pm2 logs ${PM2_NAME:-sc-bridge}"
 echo "    Persist: pm2 save && pm2 startup"

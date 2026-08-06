@@ -23,7 +23,11 @@ if [ ! -x "node_modules/.bin/sc" ]; then
   npm install
 fi
 
-PORT="${PORT:-8787}"
+# PORT: explicit env wins, then .env (same value PM2 uses), then the default.
+if [ -z "${PORT:-}" ] && [ -f .env ]; then
+  PORT="$(grep -m1 '^PORT=' .env | cut -d= -f2- || true)"
+fi
+export PORT="${PORT:-8787}"
 
 # Where each session's sc stores its ~/.simple (cookie + .scratch localStorage):
 # under Node's os.tmpdir() as sc-home-<random>/. Resolve it the same way the
