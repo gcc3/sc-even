@@ -219,7 +219,15 @@ async function main() {
     onUnavailable: () => emit("\n[sc bridge unavailable — run `npm run dev`]\n"),
   });
 
-  function ask(text: string) {
+  function ask(rawText: string) {
+    // Kept to one line on purpose. The bridge can carry a multi-line message now
+    // (see writeLine in serve.mjs), so this is no longer a transport limit — but
+    // the glasses are a handful of rows and this UI's input box holds one line,
+    // so there is nothing here that a line break would be expressing. A
+    // transcript is the only thing that can still arrive with one in it.
+    const text = rawText.replace(/\s*[\r\n]+\s*/g, " ").trim();
+    if (!text) return;
+
     draft = "";
     display.followLive();
     terminal = (terminal + `${lastPrompt}${text}\n`).slice(-TERMINAL_MAX);

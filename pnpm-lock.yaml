@@ -12,8 +12,8 @@ importers:
         specifier: ^0.0.10
         version: 0.0.10
       simple-ai-chat:
-        specifier: ^0.1.64
-        version: 0.1.64(@babel/core@7.29.7)(@types/node@26.1.2)(@typescript-eslint/parser@8.66.0(eslint@9.39.5(jiti@1.21.7))(typescript@6.0.3))(encoding@0.1.13)(eslint@9.39.5(jiti@1.21.7))(typescript@6.0.3)(webpack@5.109.2(postcss@8.5.26))(zod@4.4.3)
+        specifier: ^0.1.65
+        version: 0.1.65(@babel/core@7.29.7)(@types/node@26.1.2)(@typescript-eslint/parser@8.66.0(eslint@9.39.5(jiti@1.21.7))(typescript@6.0.3))(encoding@0.1.13)(eslint@9.39.5(jiti@1.21.7))(typescript@6.0.3)(webpack@5.109.2(postcss@8.5.26))(zod@4.4.3)
     devDependencies:
       typescript:
         specifier: ~6.0.2
@@ -3875,8 +3875,8 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
 
-  simple-ai-chat@0.1.64:
-    resolution: {integrity: sha512-gYaaHhg1lQulB/H4//r6AvJ7o/rrIl1zmfp5R+2wGg02h0ypHuxwasV37q5jsvo5voUgm2chsKFBCv6+Gu4TWQ==}
+  simple-ai-chat@0.1.65:
+    resolution: {integrity: sha512-UhHAyJE5TUkHu3cMow1x/zlk88I7YwtB1UJz0nHa6N1p63ktFXFqtbn/dWqiSKUeYcjrXyx0JKW8lFchYbWivA==}
     engines: {node: '>=14.6.0'}
     hasBin: true
 
@@ -5848,7 +5848,7 @@ snapshots:
 
   '@types/node-fetch@2.6.13':
     dependencies:
-      '@types/node': 18.19.130
+      '@types/node': 26.1.2
       form-data: 4.0.6
 
   '@types/node@18.19.130':
@@ -8888,7 +8888,7 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
-  simple-ai-chat@0.1.64(@babel/core@7.29.7)(@types/node@26.1.2)(@typescript-eslint/parser@8.66.0(eslint@9.39.5(jiti@1.21.7))(typescript@6.0.3))(encoding@0.1.13)(eslint@9.39.5(jiti@1.21.7))(typescript@6.0.3)(webpack@5.109.2(postcss@8.5.26))(zod@4.4.3):
+  simple-ai-chat@0.1.65(@babel/core@7.29.7)(@types/node@26.1.2)(@typescript-eslint/parser@8.66.0(eslint@9.39.5(jiti@1.21.7))(typescript@6.0.3))(encoding@0.1.13)(eslint@9.39.5(jiti@1.21.7))(typescript@6.0.3)(webpack@5.109.2(postcss@8.5.26))(zod@4.4.3):
     dependencies:
       '@aws-sdk/client-s3': 3.1105.0
       '@aws-sdk/client-ses': 3.1105.0

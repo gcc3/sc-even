@@ -41,6 +41,14 @@ terminal page. Returns `{ history: [...] }`. Read from the CLI's own scratch fil
 `POST /api/sc/send`  
 Send a message to the CLI. Body: `{ session, text }`.
 
+`text` may span several lines. The CLI reads stdin with readline, so a newline there is a
+submission boundary — a multi-line message is JSON-encoded onto a single line behind a marker
+byte and unpacked on the way in. The convention is defined in `simple-ai-chat`'s
+`utils/stdin.js`; `writeLine` in `serve.mjs` is the encoding half. Single-line messages go
+through untouched, so this needs `simple-ai-chat` new enough to decode **only** for multi-line.
+
+On the terminal page, Shift+Enter breaks a line and Enter sends.
+
 `POST /api/sc/login`  
 Log in to the sc account. Body: `{ session, username, password }`.
 

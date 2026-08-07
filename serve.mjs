@@ -21,7 +21,7 @@
 //   GET  /                                            -> web/index.html, a terminal page
 //   GET  /api/sc/stream?session=<id>                  -> SSE; the CLI's stdout
 //   GET  /api/sc/history?session=<id>                 -> the CLI's command history
-//   POST /api/sc/send   { session, text }             -> write a line to the CLI
+//   POST /api/sc/send   { session, text }             -> one message to the CLI (may span lines)
 //   POST /api/sc/login  { session, username, password } -> `:login <u> <p>`
 //   GET  /healthz                                     -> "ok"
 //
@@ -213,8 +213,24 @@ function ensureChild(id) {
   return s;
 }
 
+// One call, one submission. The CLI reads stdin with readline, so a message containing
+// newlines cannot travel as itself — it would arrive as several inputs, and a second line
+// starting with ":" would run as a command. A multi-line message therefore goes JSON-encoded
+// onto a single line behind a marker byte, which the CLI unpacks on the way in.
+//
+// The convention is defined, with both halves and the reasoning, in the CLI's own
+// utils/stdin.js. This is the encoding half written out again rather than imported from
+// there: importing would tie the bridge's ability to *start* to the CLI being new enough,
+// which would take the whole bridge down on a version it could otherwise serve perfectly
+// well. A single-line message is passed through untouched, so against a CLI too old to
+// decode, only multi-line — which could not be sent at all before — is affected.
+const STDIN_MULTILINE_MARK = "\x02"; // STX; a control byte, so no typed line can begin with it
+
 function writeLine(session, line) {
-  if (session.child) session.child.stdin.write(line.endsWith("\n") ? line : line + "\n");
+  if (!session.child) return;
+  const text = String(line).replace(/\r?\n$/, "");
+  const wire = /[\r\n]/.test(text) ? STDIN_MULTILINE_MARK + JSON.stringify(text) : text;
+  session.child.stdin.write(wire + "\n");
 }
 
 function destroySession(id) {

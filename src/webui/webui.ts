@@ -136,6 +136,26 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   // live (e.g. "gpt-5.5> hello") before it's submitted.
   inputField.addEventListener("input", () => options.onInput(inputField.value));
 
+  // A text input cannot hold a newline: the HTML value sanitization algorithm
+  // *strips* them from anything pasted in, which silently glues the last word of
+  // one line onto the first word of the next ("第一行第二行"). Flatten them to
+  // spaces ourselves instead, so a pasted block at least keeps its word breaks.
+  //
+  // Flattening rather than preserving, because a real newline could never
+  // survive the trip anyway — the sc CLI reads stdin with readline, one line per
+  // submission, so an embedded newline arrives as a *second* input (and a line
+  // starting with ":" would run as a command). See writeLine in serve.mjs.
+  inputField.addEventListener("paste", (e) => {
+    const pasted = e.clipboardData?.getData("text") ?? "";
+    if (!/[\r\n]/.test(pasted)) return; // single line — let the browser do it
+    e.preventDefault();
+    const flat = pasted.replace(/\s*[\r\n]+\s*/g, " ").trim();
+    const start = inputField.selectionStart ?? inputField.value.length;
+    const end = inputField.selectionEnd ?? start;
+    inputField.setRangeText(flat, start, end, "end");
+    inputField.dispatchEvent(new Event("input")); // setRangeText fires none itself
+  });
+
   // On iOS the on-screen keyboard overlays the page instead of resizing it, so
   // the terminal shrinks to the visible (visual viewport) area and stays readable.
   const appEl = root.querySelector<HTMLDivElement>(".app")!;

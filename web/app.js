@@ -3,7 +3,7 @@
 //
 //   GET  /api/sc/stream?session=<id>   `chunk` events, and `ready` at every prompt
 //   GET  /api/sc/history?session=<id>  the commands the CLI has run, for ↑
-//   POST /api/sc/send   { session, text }   write one line to the CLI's stdin
+//   POST /api/sc/send   { session, text }   one message to the CLI (may span lines)
 
 const el = document.getElementById("terminal");
 const mirror = document.getElementById("mirror");
@@ -230,16 +230,19 @@ el.addEventListener("input", () => {
     paint();
     return;
   }
-  // A pasted block would otherwise become several stdin lines.
-  draft = next.slice(log.length).replace(/[\r\n]+/g, " ");
+  // Line breaks are kept, in the draft and all the way to the model: the bridge encodes a
+  // multi-line message onto one stdin line so the CLI still reads it as a single submission.
+  // What is on screen is what gets sent.
+  draft = next.slice(log.length);
   // The box already holds the keystroke; this is the mirror catching up with it.
   sync();
 });
 
 el.addEventListener("keydown", (e) => {
   // Enter runs the line. A live IME composition keeps it, so committing a candidate with
-  // Enter does not submit half a sentence.
-  if (e.key === "Enter" && !e.isComposing) {
+  // Enter does not submit half a sentence. Shift+Enter is left to the box, whose own default
+  // is to break the line — a message can span several, and one still sends as one.
+  if (e.key === "Enter" && !e.isComposing && !e.shiftKey) {
     e.preventDefault();
     submit();
   }

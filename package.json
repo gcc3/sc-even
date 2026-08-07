@@ -18,6 +18,6 @@
   },
   "dependencies": {
     "@evenrealities/even_hub_sdk": "^0.0.10",
-    "simple-ai-chat": "^0.1.64"
+    "simple-ai-chat": "^0.1.65"
   }
 }
