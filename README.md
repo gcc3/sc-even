@@ -3,123 +3,64 @@ sc-even
 =======
 
 
-Connects Even G2 to the Simple AI CLI.  
+Connects Even G2 to the Simple AI CLI.
+
+Talk to the glasses, the speech is transcribed and sent to `sc`
+([simple-ai-chat](https://www.npmjs.com/package/simple-ai-chat)) running on a server, and the
+reply is displayed on the lens. The phone-side page is a terminal you can also type into.
 
 
-Publish
--------
+Quick start
+-----------
 
-Bump the version in `app.json`.  
-Run `./package.sh`  
+**1. Install the app**
 
-Upload the generated `.ehpk` file to  
-[Even G2 Protal](https://hub.evenrealities.com/)  
+Get *Simple AI* from the [Even Hub](https://hub.evenrealities.com/hub/com.gcc3.g2sc) and open
+it from the Even app with the G2 connected.
 
-Manage  
-[Even Hub plugin page](https://hub.evenrealities.com/hub/com.gcc3.g2sc)
+**2. Log in (optional)**
 
+Tap the person icon in the app header and enter your Simple AI username and password — this
+ties the session to your account, so your conversation and CLI settings are yours rather than
+the session's. "Save" remembers the credentials on the device.
 
-sc-bridge API
--------------
+**3. Talk**
 
-`GET /`  
-The terminal page.  
-Open `http://localhost:8787/`.  
+| On the glasses | |
+| --- | --- |
+| Tap | Start recording — the lens shows `● recording · tap to stop` |
+| Tap again | Stop, transcribe, and send |
+| Scroll up / down | Page back and forward through a long reply |
+| Double-tap | Exit (the OS asks you to confirm) |
 
-`GET /healthz`  
-Health check. Returns `ok`.
+Clips under 250 ms are discarded, so an accidental double tap won't send anything, and
+recording stops on its own after 60 s.
 
-`GET /api/sc/stream?session=<id>`  
-SSE stream of the CLI's output for the given session. Emits `chunk` events with text and a `ready` event when the CLI is idle.
+**4. Or type**
 
-`GET /api/sc/history?session=<id>`  
-The `:` commands the session's CLI has run, newest first — what ↑ walks back through on the
-terminal page. Returns `{ history: [...] }`. Read from the CLI's own scratch file
-(`$HOME/.simple/.scratch/history`, which is per-session); commands carrying a password
-(`:login`, `:user add`, `:user set pass`, `:user join`) are left out.
-
-`POST /api/sc/send`  
-Send a message to the CLI. Body: `{ session, text }`.
-
-`text` may span several lines. The CLI reads stdin with readline, so a newline there is a
-submission boundary — a multi-line message is JSON-encoded onto a single line behind a marker
-byte and unpacked on the way in. The convention is defined in `simple-ai-chat`'s
-`utils/stdin.js`; `writeLine` in `serve.mjs` is the encoding half. Single-line messages go
-through untouched, so this needs `simple-ai-chat` new enough to decode **only** for multi-line.
-
-On the terminal page, Shift+Enter breaks a line and Enter sends.
-
-`POST /api/sc/login`  
-Log in to the sc account. Body: `{ session, username, password }`.
+The app page is a full terminal: type a message and press Enter, Shift+Enter for a new line.
+`:` commands go to the CLI as-is — `:help` lists them. The gear icon opens settings (speech
+language, UI language, theme, transcription on/off); the refresh icon resets the conversation.
 
 
-Debugging speech recognition
-----------------------------
+Self-hosting the bridge
+-----------------------
 
-While running `./develop.sh`, every clip captured by the glasses mic is saved to
-`recordings/` (git-ignored) so a bad transcript can be listened to instead of guessed at.
+The published app talks to `https://cli.simple-ai.io/`. To run your own:
 
-Open `http://<dev-host>:5173/api/recordings` — a player per clip, with the text the API
-returned underneath. Each tap saves two files: `-raw` is straight off the mic, `-clip` is
-after conditioning and is the one actually sent, so what you hear in `-clip` is what the
-model heard.
-
-The console logs `peak` / `rms` / `clipped%` for both, which is the A/B for the
-conditioning.
-
-
-Mic conditioning
-----------------
-
-Clips are run through `enhanceCapture` (`src/utils/audio.ts`) before being sent: a 60 Hz
-high-pass, spectral-subtraction noise reduction, then ×1.2 gain and a soft limiter.
-
-The gain is deliberately modest and the limiter is not optional. This mic runs hot — peaks
-sit near full scale on normal speech — and an earlier ×20 stage clipped ~15% of samples and
-wrecked accuracy. Speech survives distortion well enough for a human ear; transcription
-falls off a cliff. So the limiter leaves everything below 0.7 alone (where the ×1.2 is
-exact) and bends the curve above it, asymptotic to full scale, which makes clipping
-impossible by construction rather than by luck. If `clipped%` is ever non-trivial, look
-here first.
-
-Noise is estimated per frequency bin rather than per frame, from a low percentile of each
-bin across the whole clip. That matters because push-to-talk clips are often wall-to-wall
-speech with no pause to measure a noise floor from — a bin, unlike a frame, still has quiet
-moments even then. It also means noise sitting *underneath* speech is removed, which a
-frame-level gate cannot do at all.
-
-The trade-off: anything genuinely stationary for the whole clip is treated as noise and
-removed, because at that point it is indistinguishable from noise. Real speech is never
-stationary, so this only bites on things like a constant tone or fan hum — which is the
-intended behaviour.
-
-Measured on synthetic speech-in-noise: speech ×1.13, noise −16 dB, 0% clipped, ~15 ms for a
-5 s clip (~200 ms for the 60 s cap).
-
-To stop saving clips, set `SAVE_RECORDINGS=false` in `.env`. The dev server restarts on the
-change and the listing stays browsable, so clips captured earlier can still be played.
-
-Dev-only — the code is compiled out of the packaged build (`import.meta.env.DEV`).
-
-
-Troubleshooting
----------------
-
-Behind a reverse proxy  
-The output is SSE, so buffering has to be off — a buffered stream is delivered only once the
-buffer fills, and a prompt-sized chunk never fills it. The server says so itself
-(`X-Accel-Buffering: no`, which nginx honours) and sends a comment every 20s so an idle
-stream isn't mistaken for a dead one.
-
-If a proxy still holds it back, say it in the config too:
-
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:8787;
-    proxy_http_version 1.1;
-    proxy_buffering off;      # SSE: pass each chunk straight through
-    proxy_read_timeout 1h;    # a stream waiting for input is not a dead one
-    proxy_set_header Host $host;
-    proxy_set_header Connection "";   # SSE is not a WebSocket upgrade
-}
+```bash
+./setup.sh                 # install deps, create .env
+# put your OPENAI_API_KEY in .env
+./start.sh                 # sc-bridge under PM2 on :8787
 ```
+
+Then open `http://localhost:8787/` for the terminal page, and point
+`SC_SERVER_BASE_URL` in [src/services/sc.ts](src/services/sc.ts#L12) at your host (it also has
+to be in the `network` whitelist in [app.json](app.json)).
+
+
+Docs
+----
+
+- [Development](docs/Development.md) — setup, dev server, release, and debugging
+- [sc-bridge API](docs/Bridge-API.md) — endpoints, sessions, environment, reverse proxies
