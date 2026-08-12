@@ -64,3 +64,13 @@ Docs
 
 - [Development](docs/Development.md) — setup, dev server, release, and debugging
 - [sc-bridge API](docs/Bridge-API.md) — endpoints, sessions, environment, reverse proxies
+
+
+License
+-------
+
+[Simple AI License](LICENSE) © 2026 simple-ai.io
+
+You can fork this code and run it on your own machine for non-commercial use.
+Commercial use of the software, or any part of it, is not permitted, and
+neither is offering a product that competes with it, free of charge or not.

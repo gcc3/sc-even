@@ -2,6 +2,7 @@
   "name": "simple-ai-even",
   "private": true,
   "version": "0.0.0",
+  "license": "Simple AI License",
   "type": "module",
   "engines": {
     "node": ">=22",
