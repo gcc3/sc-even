@@ -2,7 +2,10 @@
    Loaded from a CDN; if unreachable, the monospace fallbacks below kick in. */
 @import url(https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/fira_code.css);
 
-/* Dark is the default theme; the others override via [data-theme] on <html>. */
+/* Dark is the default theme; the others override via [data-theme] on <html>.
+   Borders and dividers all draw from --border, so they follow the theme. It is
+   black in the monochrome light theme; on the dark and terminal palettes black
+   would sit on a near-black background and the line would vanish. */
 :root[data-theme="light"] {
   --bg: #ffffff;
   --panel: #ffffff;
@@ -21,7 +24,7 @@
 :root[data-theme="dark"] {
   --bg: #0f1014;
   --panel: #181a21;
-  --border: #000000;
+  --border: #2a2d38;
   --track: #2a2d38;
   --text: #e6e7ea;
   --muted: #8b8f9a;
@@ -35,7 +38,7 @@
 :root[data-theme="terminal"] {
   --bg: #000000;
   --panel: #0a140a;
-  --border: #000000;
+  --border: #1f3a1f;
   --track: #1f3a1f;
   --text: #00f700;
   --muted: #2a8a3a;
@@ -148,8 +151,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
@@ -157,8 +160,8 @@ body {
 }
 
 .icon-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 
@@ -168,6 +171,11 @@ body {
   min-height: 0; /* allow the pane to shrink so it scrolls and the input stays pinned */
   margin: 0;
   padding: 12px;
+  /* The pane still fills the screen — only its content stops short of the bottom.
+     On iOS the display's rounded corners and the home indicator eat into that
+     strip, which was clipping the last line of output. env() is 0 on hardware
+     without an inset, so this is self-scoping: no offset where none is needed. */
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;

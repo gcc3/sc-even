@@ -26,6 +26,8 @@ const TAP_RESCUE_AFTER_MS = 1000;
 // press to the host, and that shouldn't open the mic. Holding again once the window
 // has passed records as usual.
 const TAP_SUPPRESS_MS = 2000;
+// The idle hint, shown on the glasses only — see setStatus.
+const IDLE_STATUS = "● hold to talk";
 
 async function main() {
   const bridge = await waitForEvenAppBridge();
@@ -76,7 +78,10 @@ async function main() {
 
   function setStatus(text: string) {
     statusText = text;
-    ui?.setStatus(text);
+    // The idle hint is a glasses affordance — it tells you the touch bar is live.
+    // The web UI has its own input, so it shows nothing rather than a hint for a
+    // gesture that isn't available there.
+    ui?.setStatus(text === IDLE_STATUS ? "" : text);
     renderAll();
   }
 
@@ -96,7 +101,7 @@ async function main() {
 
   // Status shown when the app is idle and ready for a press.
   function idleStatus(): string {
-    return transcriptionEnabled ? "● hold to talk" : "";
+    return transcriptionEnabled ? IDLE_STATUS : "";
   }
 
   // Show a transient status, then fall back to the idle hint.

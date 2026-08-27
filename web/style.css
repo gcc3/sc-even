@@ -59,6 +59,10 @@ body {
   position: absolute;
   inset: 0;
   padding: 16px;
+  /* The bottom strip belongs to the display's rounded corners and the home indicator,
+     which were clipping the last line. Set on the shared rule, so both layers keep the
+     same box and the two copies of the text stay aligned. 0 where there is no inset. */
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 14px;
   line-height: 1.6;

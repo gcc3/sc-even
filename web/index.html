@@ -7,10 +7,13 @@
   <head>
     <meta charset="utf-8" />
     <!-- Fixed scale: iOS zooms the page in when a field smaller than 16px takes focus, which
-         would push the terminal past the window edge. Same meta as the glasses app's. -->
+         would push the terminal past the window edge. Same meta as the glasses app's.
+         viewport-fit=cover is what makes env(safe-area-inset-*) report real numbers rather
+         than 0 — installed to the home screen this page is full-screen, so the display's
+         rounded corners cut into the bottom of the terminal. style.css pads it back. -->
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>sc</title>
     <!-- The name on a white square, as the glasses board does it. Three consumers, three
