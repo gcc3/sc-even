@@ -18,9 +18,10 @@ const WEB_LOG_MAX = 100000;
 const MAX_RECORDING_MS = 60000;
 // Discard clips shorter than this (a press let go of at once, no real speech).
 const MIN_RECORDING_MS = 250;
-// A tap only stops a recording this long after the press began — see the tap
-// branch in the event handler for why.
-const TAP_RESCUE_AFTER_MS = 1000;
+// The host sometimes reports the touch that opens a long press as a tap as well.
+// A tap arriving this soon after a recording started is that stray report, not a
+// deliberate one, and is ignored outright.
+const PRESS_START_TAP_MS = 1000;
 // A tap stands the mic down for this long: a long press arriving within the window
 // doesn't record. Tapping and then leaving a finger on the touch bar reads as a long
 // press to the host, and that shouldn't open the mic. Holding again once the window
@@ -93,7 +94,7 @@ async function main() {
   let recordedChunks: Uint8Array[] = [];
   let recordedBytes = 0;
   let recordingTimer = 0;
-  // When the current recording began, so the tap rescue below can tell a stray
+  // When the current recording began, so the tap branch below can tell a stray
   // touch report at the start of the press from a deliberate tap later on.
   let recordingStartedAt = 0;
   // When the last tap arrived, so a long press following it can be ignored.
@@ -389,19 +390,18 @@ async function main() {
 
     // Single-tap. Arrives as a sysEvent with only an `eventSource` and no
     // `eventType` — the host doesn't emit CLICK_EVENT for it.
-    // Talking is on the long press now, so a tap never starts anything. It stands the
-    // mic down for TAP_SUPPRESS_MS, so a tap the finger stays down after — which the
-    // host goes on to report as a long press — doesn't open the mic; and it stops a
-    // recording that is running, as a rescue for a release event that never arrives
-    // (the mic would otherwise stay open until the MAX_RECORDING_MS cap).
-    // Ignored outright for the first TAP_RESCUE_AFTER_MS of a recording, in case the
-    // host reports the touch that opens a long press as a tap as well — that must
-    // neither cut the recording off nor stand the mic down as it starts.
+    // Talking is on the long press, so a tap neither starts a recording nor stops one:
+    // letting go of the touch bar is the only way to end a recording, and the
+    // MAX_RECORDING_MS cap is what catches a release event that never arrives.
+    // All a tap does is stand the mic down for TAP_SUPPRESS_MS, so a tap the finger
+    // stays down after — which the host goes on to report as a long press — doesn't
+    // open the mic. Ignored outright for the first PRESS_START_TAP_MS of a recording,
+    // in case the host reports the touch that opens a long press as a tap as well:
+    // that must not stand the mic down just as it starts.
     const eventSource = event.sysEvent?.eventSource;
     if (eventType == null && eventSource != null && eventSource !== EventSourceType.TOUCH_EVENT_FORM_DUMMY_NULL) {
-      if (recording && Date.now() - recordingStartedAt <= TAP_RESCUE_AFTER_MS) return;
+      if (recording && Date.now() - recordingStartedAt <= PRESS_START_TAP_MS) return;
       lastTapAt = Date.now();
-      if (recording) void finishRecording();
       return;
     }
 

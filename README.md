@@ -36,10 +36,11 @@ the session's. "Save" remembers the credentials on the device.
 Clips under 250 ms are discarded, so a press let go of at once won't send anything, and
 recording stops on its own after 60 s.
 
-A tap never starts a recording. It stops one that's running (in case the glasses ever miss
-the release) and it stands the mic down for two seconds, so tapping and then leaving a
-finger on the touch bar — which the glasses report as a long press — doesn't open the mic.
-Hold again after that and it records as usual.
+A tap neither starts a recording nor stops one — releasing the touch bar is the only way
+to end a recording, and the 60 s cap above is what catches a release the glasses never
+report. All a tap does is stand the mic down for two seconds, so tapping and then leaving
+a finger on the touch bar — which the glasses report as a long press — doesn't open the
+mic. Hold again after that and it records as usual.
 
 Press-and-hold needs Even App **2.2.9** or newer (`min_app_version` in
 [app.json](app.json)) — that's the version that started reporting the two ends of a long
