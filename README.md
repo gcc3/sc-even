@@ -28,13 +28,22 @@ the session's. "Save" remembers the credentials on the device.
 
 | On the glasses | |
 | --- | --- |
-| Tap | Start recording — the lens shows `● recording · tap to stop` |
-| Tap again | Stop, transcribe, and send |
+| Press and hold | Start recording — the lens shows `● recording · release to send` |
+| Release | Stop, transcribe, and send |
 | Scroll up / down | Page back and forward through a long reply |
 | Double-tap | Exit (the OS asks you to confirm) |
 
-Clips under 250 ms are discarded, so an accidental double tap won't send anything, and
+Clips under 250 ms are discarded, so a press let go of at once won't send anything, and
 recording stops on its own after 60 s.
+
+A tap never starts a recording. It stops one that's running (in case the glasses ever miss
+the release) and it stands the mic down for two seconds, so tapping and then leaving a
+finger on the touch bar — which the glasses report as a long press — doesn't open the mic.
+Hold again after that and it records as usual.
+
+Press-and-hold needs Even App **2.2.9** or newer (`min_app_version` in
+[app.json](app.json)) — that's the version that started reporting the two ends of a long
+press to the app.
 
 **4. Or type**
 

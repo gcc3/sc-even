@@ -71,6 +71,12 @@ Manage the listing on the
 (whitelisted to `https://api.openai.com` and `https://cli.simple-ai.io`) and `g2-microphone`.
 Changing the bridge host means changing the whitelist.
 
+`min_app_version` / `min_sdk_version` are held at `2.2.9` / `0.0.14` by press-and-hold:
+`LONG_PRESS_EVENT` and `LONG_PRESS_RELEASE_EVENT` arrived in `even_hub_sdk` 0.0.14, which
+raised the minimum Even App to 2.2.9. On an older host neither event is delivered and there
+is no API to feature-detect that at runtime, so the manifest is what keeps the app off
+hosts where holding the touch bar would do nothing.
+
 
 Debugging speech recognition
 ----------------------------
@@ -79,7 +85,7 @@ While running `./develop.sh`, every clip captured by the glasses mic is saved to
 `recordings/` (git-ignored) so a bad transcript can be listened to instead of guessed at.
 
 Open `http://<dev-host>:5173/api/recordings` — a player per clip, with the text the API
-returned underneath. Each tap saves two files: `-raw` is straight off the mic, `-clip` is
+returned underneath. Each recording saves two files: `-raw` is straight off the mic, `-clip` is
 after conditioning and is the one actually sent, so what you hear in `-clip` is what the
 model heard.
 

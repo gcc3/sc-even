@@ -19,7 +19,7 @@
     "vite": "^8.0.12"
   },
   "dependencies": {
-    "@evenrealities/even_hub_sdk": "^0.0.10",
+    "@evenrealities/even_hub_sdk": "^0.0.14",
     "simple-ai-chat": "^0.1.65"
   }
 }

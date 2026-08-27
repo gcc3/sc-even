@@ -10,7 +10,7 @@
 // hear is what the model heard.
 //
 // To stop saving clips, put `SAVE_RECORDINGS=false` in .env — vite restarts the
-// dev server on the change, so it applies to the next tap. Both flags below are
+// dev server on the change, so it applies to the next recording. Both flags below are
 // compile-time constants, so with either one off this whole module is eliminated
 // from the bundle (and it is always off in the packaged build).
 
@@ -64,7 +64,7 @@ async function post(path: string, contentType: string, body: BodyInit): Promise<
 // Save one clip as `recordings/<id>-<tag>.wav`. Never throws: a failed dump
 // must not break the transcription it was meant to help debug.
 //
-// Each tap saves two files: `-raw` straight off the mic and `-clip` after
+// Each recording saves two files: `-raw` straight off the mic and `-clip` after
 // enhanceCapture, which is the one actually sent. They sit next to each other
 // in the listing, so what the conditioning did can be heard rather than argued
 // about — and the logged peak/rms/clipped% of the pair is the A/B.

@@ -6,7 +6,8 @@
 :root[data-theme="light"] {
   --bg: #ffffff;
   --panel: #ffffff;
-  --border: #cccccc;
+  --border: #000000;
+  --track: #cccccc; /* switch track fill — a surface, not a border */
   --text: #1a1c22;
   --muted: #6b7280;
   --accent: #1a1c22; /* monochrome — no color */
@@ -20,7 +21,8 @@
 :root[data-theme="dark"] {
   --bg: #0f1014;
   --panel: #181a21;
-  --border: #2a2d38;
+  --border: #000000;
+  --track: #2a2d38;
   --text: #e6e7ea;
   --muted: #8b8f9a;
   --accent: #4ade80;
@@ -33,7 +35,8 @@
 :root[data-theme="terminal"] {
   --bg: #000000;
   --panel: #0a140a;
-  --border: #1f3a1f;
+  --border: #000000;
+  --track: #1f3a1f;
   --text: #00f700;
   --muted: #2a8a3a;
   --accent: #39ff14;
@@ -45,6 +48,10 @@
 
 * {
   box-sizing: border-box;
+  /* Square corners everywhere — the UI uses no rounded borders. Set here rather
+     than per-rule so native controls (which WebKit rounds on its own) are covered
+     too, and so a stray radius can't creep back in unnoticed. */
+  border-radius: 0;
   /* Suppress the iOS/webview tap highlight. Without this, tapping a button that
      then disappears (e.g. Cancel closing a modal) leaves the gray highlight box
      orphaned on screen until the next repaint. */
@@ -144,7 +151,6 @@ body {
   width: 30px;
   height: 30px;
   border: 1px solid var(--border);
-  border-radius: 7px;
   background: var(--panel);
   color: var(--text);
   cursor: pointer;
@@ -215,7 +221,6 @@ body {
   max-width: 380px;
   background: var(--panel);
   border: none;
-  border-radius: 9px;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -310,8 +315,7 @@ body {
   position: relative;
   width: 36px;
   height: 20px;
-  border-radius: 10px;
-  background: var(--border);
+  background: var(--track);
   transition: background 0.2s;
 }
 
@@ -325,7 +329,6 @@ body {
   left: 2px;
   width: 16px;
   height: 16px;
-  border-radius: 50%;
   background: #fff;
   transition: transform 0.2s;
 }
@@ -341,8 +344,7 @@ body {
   width: 100%;
   height: 36px;
   padding: 0 10px;
-  border: 1px solid var(--btn);
-  border-radius: 7px;
+  border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
   font-size: 13px;
@@ -394,8 +396,7 @@ body {
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  border: 1px solid var(--muted);
-  border-radius: 3px;
+  border: 1px solid var(--border);
   background: transparent;
   position: relative;
   cursor: pointer;
@@ -415,8 +416,7 @@ body {
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  border: 1px solid var(--muted);
-  border-radius: 3px;
+  border: 1px solid var(--border);
   background: transparent;
   position: relative;
   cursor: pointer;
@@ -437,8 +437,7 @@ body {
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  border: 1px solid var(--muted);
-  border-radius: 3px;
+  border: 1px solid var(--border);
   background: transparent;
   position: relative;
   cursor: pointer;
@@ -474,8 +473,7 @@ body {
   top: 100%;
   z-index: 10;
   background: var(--bg);
-  border: 1px solid var(--btn);
-  border-radius: 9px;
+  border: 1px solid var(--border);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   max-height: 280px;
   overflow-y: auto;
@@ -509,7 +507,6 @@ body {
 .select__option {
   padding: 6px 10px;
   border: 1px solid transparent; /* reserved so hover doesn't shift layout */
-  border-radius: 7px;
   font-size: 13px;
   color: var(--text);
   cursor: pointer;
@@ -534,7 +531,6 @@ body {
 
 .btn {
   padding: 6px 12px;
-  border-radius: 7px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
@@ -544,7 +540,7 @@ body {
 
 .btn--primary {
   background: var(--btn);
-  border-color: var(--btn);
+  border-color: var(--border);
   color: var(--btn-text);
   font-weight: 600;
 }
@@ -604,7 +600,6 @@ body {
   transform: translateX(-50%) translateY(10px);
   padding: 8px 12px;
   border: 1px solid var(--border);
-  border-radius: 9px;
   background: var(--panel);
   color: var(--text);
   font-size: 13px;

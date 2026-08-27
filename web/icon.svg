@@ -1,0 +1,22 @@
+<!-- The home-screen icon, and the source the three PNGs beside it were rendered from. Not in
+     serve.mjs's static list on purpose: nothing fetches it, the phones are handed the PNGs.
+     It lives here so the drawing sits next to what it produced.
+
+     Courier, not the favicon's Fira Code: the glasses board's own home-screen icons are
+     Courier, so this is what makes the two sit together on a home screen. (Its icon.svg
+     names Fira Code, but the @font-face there points at an absolute /fonts/ path that never
+     resolved when its PNGs were made, so what shipped is the renderer's fallback. Measured,
+     not assumed: Courier reproduces those PNGs to 0.72% and to the exact ink bounding box,
+     against 3.42% for real Fira Code.)
+
+     300, not the favicon's 350: at 300 the ink of "sc" spans a radius of 166 from the
+     centre, which is both inside the 205 an Android maskable icon may use before the
+     launcher crops it, and the same footprint the board's own icon has — two glyphs at 300
+     take up what its nine at 100 do. y is the alphabetic baseline; see favicon.svg.
+
+     To re-render after editing, screenshot this at 180, 192 and 512 with the text in real
+     Courier — apple-touch-icon.png, icon-192.png, icon-512.png. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#ffffff"/>
+  <text x="256" y="324" fill="#111111" font-family="Courier, monospace" font-size="300" text-anchor="middle">sc</text>
+</svg>

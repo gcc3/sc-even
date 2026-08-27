@@ -55,6 +55,14 @@ const STATIC = new Map([
   ["/style.css", ["web/style.css", "text/css; charset=utf-8"]],
   ["/boot.js", ["web/boot.js", "text/javascript; charset=utf-8"]],
   ["/app.js", ["web/app.js", "text/javascript; charset=utf-8"]],
+  // The icon, in the format each consumer asks for: the SVG for the tab, the 180 for iOS's
+  // home screen, the manifest and its two PNGs for Android's. The paths are the ones written
+  // into index.html and the manifest, so they are absolute and flat like the rest.
+  ["/favicon.svg", ["web/favicon.svg", "image/svg+xml"]],
+  ["/apple-touch-icon.png", ["web/apple-touch-icon.png", "image/png"]],
+  ["/icon-192.png", ["web/icon-192.png", "image/png"]],
+  ["/icon-512.png", ["web/icon-512.png", "image/png"]],
+  ["/manifest.webmanifest", ["web/manifest.webmanifest", "application/manifest+json; charset=utf-8"]],
 ]);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
 

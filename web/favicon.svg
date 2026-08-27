@@ -1,0 +1,16 @@
+<!-- The tab icon: the name in Fira Code, black on white, on the same 512 square the glasses
+     board uses. Fira Code here and Courier in icon.svg is deliberate — a tab icon is read at
+     16px, where Fira Code's heavier strokes survive and Courier's thin ones do not.
+
+     No @font-face: an SVG used as an icon loads in secure static mode and may not fetch a
+     font however the reference is written, so a webfont would never arrive. A locally
+     installed family still resolves, hence the plain stack below — same order as style.css.
+
+     y is the alphabetic baseline, not a centred box: dominant-baseline="central" is computed
+     from the font's own metrics, so it would shift the glyphs whenever the stack falls
+     through to a different font. 348 puts the ink of "sc" on the square's centre at this
+     size; re-measure it if the size or the text changes. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#ffffff"/>
+  <text x="256" y="348" fill="#111111" font-family="Fira Code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="350" text-anchor="middle">sc</text>
+</svg>

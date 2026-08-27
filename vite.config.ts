@@ -282,7 +282,7 @@ function scBridge(apiKey: string): Plugin {
           `.t{white-space:pre-wrap;color:#8fc;margin:8px 0 0;font:inherit}a{color:#6af}</style>` +
           `<h1>recordings <a href="/api/recordings">↻</a></h1>` +
           `<p>${wavs.length} file(s) · <code>-raw</code> off the mic, <code>-clip</code> as sent to the API</p>` +
-          (items.length ? `<ul>${items.join("")}</ul>` : `<p>nothing captured yet — tap to talk on the glasses.</p>`);
+          (items.length ? `<ul>${items.join("")}</ul>` : `<p>nothing captured yet — hold the glasses touch bar to talk.</p>`);
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" }).end(html);
       })();
     });

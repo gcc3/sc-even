@@ -11,12 +11,21 @@ const SAMPLE_RATE = 16000;
 const TERMINAL_MAX = 4000;
 const WEB_LOG_MAX = 100000;
 
-// Push-to-talk: a tap starts recording, a second tap stops it and submits.
+// Press-and-hold to talk: a long press on the glasses starts recording, letting go
+// stops it and submits.
 // Safety cap so a forgotten mic doesn't record forever — at this point the
-// recording is stopped and submitted as if the user had tapped.
+// recording is stopped and submitted as if the user had let go.
 const MAX_RECORDING_MS = 60000;
-// Discard clips shorter than this (accidental double taps, no real speech).
+// Discard clips shorter than this (a press let go of at once, no real speech).
 const MIN_RECORDING_MS = 250;
+// A tap only stops a recording this long after the press began — see the tap
+// branch in the event handler for why.
+const TAP_RESCUE_AFTER_MS = 1000;
+// A tap stands the mic down for this long: a long press arriving within the window
+// doesn't record. Tapping and then leaving a finger on the touch bar reads as a long
+// press to the host, and that shouldn't open the mic. Holding again once the window
+// has passed records as usual.
+const TAP_SUPPRESS_MS = 2000;
 
 async function main() {
   const bridge = await waitForEvenAppBridge();
@@ -71,18 +80,23 @@ async function main() {
     renderAll();
   }
 
-  // --- push-to-talk recorder ----------------------------------------------
-  // The mic is off by default. A glasses tap opens it and raw PCM chunks are
-  // accumulated here; a second tap (or the MAX_RECORDING_MS cap) closes the mic
-  // and the whole clip is transcribed in one request, then submitted.
+  // --- press-and-hold recorder --------------------------------------------
+  // The mic is off by default. A long press on the glasses opens it and raw PCM
+  // chunks are accumulated here; releasing the press (or the MAX_RECORDING_MS cap)
+  // closes the mic and the whole clip is transcribed in one request, then submitted.
   let recording = false;
   let recordedChunks: Uint8Array[] = [];
   let recordedBytes = 0;
   let recordingTimer = 0;
+  // When the current recording began, so the tap rescue below can tell a stray
+  // touch report at the start of the press from a deliberate tap later on.
+  let recordingStartedAt = 0;
+  // When the last tap arrived, so a long press following it can be ignored.
+  let lastTapAt = 0;
 
-  // Status shown when the app is idle and ready for a tap.
+  // Status shown when the app is idle and ready for a press.
   function idleStatus(): string {
-    return transcriptionEnabled ? "● tap to talk" : "";
+    return transcriptionEnabled ? "● hold to talk" : "";
   }
 
   // Show a transient status, then fall back to the idle hint.
@@ -98,9 +112,16 @@ async function main() {
     recording = true;
     recordedChunks = [];
     recordedBytes = 0;
-    setStatus("● recording · tap to stop");
+    recordingStartedAt = Date.now();
+    setStatus("● recording · release to send");
     const isMicReady = await bridge.audioControl(true);
-    if (!recording) return; // cancelled while waiting for audioControl
+    if (!recording) {
+      // Released (or cancelled) while the mic was still opening. finishRecording's
+      // audioControl(false) may have raced ahead of the open above, so close it
+      // again here rather than leaving the mic on.
+      void bridge.audioControl(false);
+      return;
+    }
     if (!isMicReady) {
       recording = false;
       flashStatus("● mic failed");
@@ -203,7 +224,7 @@ async function main() {
           // Manually append lastPrompt to webLog so the web UI shows it.
           webLog = (webLog + lastPrompt).slice(-WEB_LOG_MAX);
         }
-        setStatus(idleStatus()); // clear "● generating", show the tap-to-talk hint
+        setStatus(idleStatus()); // clear "● generating", show the hold-to-talk hint
       }
       // Flush any queued login AFTER the prompt is rendered, so echoLogin sees the
       // correct lastPrompt and the "gpt-5.5>" line appears before the :login echo.
@@ -343,17 +364,39 @@ async function main() {
       return;
     }
 
-    // Single-tap — push-to-talk.
-    // Arrives as a sysEvent with only an `eventSource` and no `eventType`
-    // — the host doesn't emit CLICK_EVENT for it. (The glasses OS reserves
-    // long-press, so a tap is the only press gesture available to the app.)
-    //   idle       → start recording
-    //   recording  → stop recording, transcribe the clip, submit
-    //   generating → ignored
+    // Long press — press and hold to talk. The host reports the two ends of the
+    // gesture as separate events, so the mic is open for exactly as long as the
+    // user holds the touch bar.
+    //   idle             → start recording
+    //   just after a tap → ignored, silently (see TAP_SUPPRESS_MS)
+    //   generating       → ignored
+    if (eventType === OsEventTypeList.LONG_PRESS_EVENT) {
+      if (Date.now() - lastTapAt < TAP_SUPPRESS_MS) return;
+      if (!generating) void startRecording();
+      return;
+    }
+
+    // Long press released — stop recording, transcribe the clip, submit.
+    if (eventType === OsEventTypeList.LONG_PRESS_RELEASE_EVENT) {
+      if (recording) void finishRecording();
+      return;
+    }
+
+    // Single-tap. Arrives as a sysEvent with only an `eventSource` and no
+    // `eventType` — the host doesn't emit CLICK_EVENT for it.
+    // Talking is on the long press now, so a tap never starts anything. It stands the
+    // mic down for TAP_SUPPRESS_MS, so a tap the finger stays down after — which the
+    // host goes on to report as a long press — doesn't open the mic; and it stops a
+    // recording that is running, as a rescue for a release event that never arrives
+    // (the mic would otherwise stay open until the MAX_RECORDING_MS cap).
+    // Ignored outright for the first TAP_RESCUE_AFTER_MS of a recording, in case the
+    // host reports the touch that opens a long press as a tap as well — that must
+    // neither cut the recording off nor stand the mic down as it starts.
     const eventSource = event.sysEvent?.eventSource;
     if (eventType == null && eventSource != null && eventSource !== EventSourceType.TOUCH_EVENT_FORM_DUMMY_NULL) {
+      if (recording && Date.now() - recordingStartedAt <= TAP_RESCUE_AFTER_MS) return;
+      lastTapAt = Date.now();
       if (recording) void finishRecording();
-      else if (!generating) void startRecording();
       return;
     }
 
