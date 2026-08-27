@@ -11,13 +11,17 @@
 import "./styles.css";
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import { loadSettings } from "../utils/setting";
-import { GEAR_SVG, USER_SVG, REFRESH_SVG } from "../assets/icons";
-import { t, setLocale, localeFromLangCode } from "../i18n";
+import { GEAR_SVG, USER_SVG, NEW_CHAT_SVG } from "../assets/icons";
+import { setLocale, localeFromLangCode } from "../i18n";
 import { userModalHTML, createUserModal } from "./user";
 import { settingsModalHTML, createSettingsModal, applyTheme } from "./settings";
 
+// How much the visual viewport has to shrink before we call it the keyboard. Well
+// above any chrome the host might slide in or out, well below the shortest iOS
+// keyboard, so neither is mistaken for the other.
+const KEYBOARD_MIN_SHRINK_PX = 120;
+
 export interface WebUI {
-  setStatus(text: string): void;
   /** Replace the terminal output with the given text (kept in sync with the glasses). */
   render(text: string): void;
   /** Show or hide the cursor at the end of the terminal output. */
@@ -53,21 +57,18 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   const root = document.querySelector<HTMLDivElement>("#app");
   if (!root) throw new Error("#app element not found");
 
-  // Load settings and apply locale before building the HTML so t() is ready.
+  // Load settings and apply locale before building the HTML, so the t() calls in the
+  // modal markup below resolve against the right language.
   const settingsRef = { current: await loadSettings(bridge) };
   setLocale(localeFromLangCode(settingsRef.current.language));
 
   root.innerHTML = `
     <div class="app">
       <header class="app__header">
-        <div class="app__title">
-          ${t("appTitle")}
-          <span class="app__status" data-status></span>
-        </div>
         <div class="app__actions">
-          <button class="icon-btn" data-refresh>${REFRESH_SVG}</button>
-          <button class="icon-btn" data-open-login>${USER_SVG}</button>
-          <button class="icon-btn" data-open-settings>${GEAR_SVG}</button>
+          <button class="bar-btn" data-refresh>${NEW_CHAT_SVG}New chat</button>
+          <button class="bar-btn" data-open-login>${USER_SVG}Profile</button>
+          <button class="bar-btn" data-open-settings>${GEAR_SVG}Settings</button>
         </div>
       </header>
       <pre class="term" data-term></pre>
@@ -81,7 +82,6 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     ${settingsModalHTML()}
   `;
 
-  const statusEl = root.querySelector<HTMLSpanElement>("[data-status]")!;
   const termEl = root.querySelector<HTMLPreElement>("[data-term]")!;
   const inputField = root.querySelector<HTMLInputElement>("[data-input-field]")!;
   const toastEl = root.querySelector<HTMLDivElement>("[data-toast]")!;
@@ -163,6 +163,11 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   if (viewport) {
     const syncViewport = () => {
       appEl.style.height = `${viewport.height}px`;
+      // The keyboard sits over the home-indicator strip while it is up, so the
+      // safe-area inset below the terminal stops being a clearance and becomes a
+      // gap between the box and the keys. styles.css drops it on this class.
+      const keyboardUp = window.innerHeight - viewport.height > KEYBOARD_MIN_SHRINK_PX;
+      root.classList.toggle("keyboard-open", keyboardUp);
       termEl.scrollTop = termEl.scrollHeight;
     };
     viewport.addEventListener("resize", syncViewport);
@@ -190,9 +195,6 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
   root.querySelector("[data-open-login]")!.addEventListener("click", () => userModal.open());
 
   return {
-    setStatus(text: string) {
-      statusEl.textContent = text;
-    },
     render(text: string) {
       termEl.textContent = text;
       termEl.scrollTop = termEl.scrollHeight;

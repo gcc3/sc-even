@@ -1,6 +1,26 @@
-/* Fira Code (variable, with ligatures) — used across the UI for a terminal feel.
+/* Fira Code (variable, with ligatures) — the terminal's face, for a terminal feel.
    Loaded from a CDN; if unreachable, the monospace fallbacks below kick in. */
 @import url(https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/fira_code.css);
+
+/* The chrome around the terminal — header buttons, modals — is ordinary UI, not
+   terminal output, so it uses the platform's own UI face rather than Fira Code.
+   -apple-system resolves to San Francisco in the iOS webview this ships in.
+   Theme-independent, hence its own :root rather than the palette blocks below. */
+:root {
+  --font-ui:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  /* The chrome: the header bar, the surround the terminal box is inset into, and the
+     Profile/Settings modals. Deliberately identical on all three themes — only the
+     terminal box itself follows the palette, so these need their own foreground and
+     control colours rather than the theme's, which would be unreadable here (near
+     white on dark, bright green on terminal). */
+  --chrome: rgb(238 238 238);
+  --chrome-ink: #000000; /* text and filled controls on the chrome — true black */
+  --chrome-muted: #6b7280; /* labels, hints, placeholders */
+  --chrome-field: #ffffff; /* input and button fills */
+  --chrome-track: #cccccc; /* the switch's off state */
+}
 
 /* Dark is the default theme; the others override via [data-theme] on <html>.
    Borders and dividers all draw from --border, so they follow the theme. It is
@@ -51,9 +71,10 @@
 
 * {
   box-sizing: border-box;
-  /* Square corners everywhere — the UI uses no rounded borders. Set here rather
-     than per-rule so native controls (which WebKit rounds on its own) are covered
-     too, and so a stray radius can't creep back in unnoticed. */
+  /* Square is the default; the rules that want a curve opt back in explicitly (each
+     marked `radius-ok`). Set here rather than per-rule so native controls — which
+     WebKit rounds on its own — are covered too, and so a stray radius can't creep
+     in unnoticed. */
   border-radius: 0;
   /* Suppress the iOS/webview tap highlight. Without this, tapping a button that
      then disappears (e.g. Cancel closing a modal) leaves the gray highlight box
@@ -61,13 +82,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Form controls don't inherit the page font by default — opt them in so buttons
-   and selects use Fira Code like the rest of the UI. */
+/* Form controls inherit neither the page font nor its size by default — opt them
+   into both, so each one takes whatever its container sets: Fira Code at 13px from
+   the body, or --font-ui at 14px inside the header and the modals. */
 button,
 input,
 select,
 textarea {
   font-family: inherit;
+  font-size: inherit;
 }
 
 /* Reset native control appearance. On the device webview (unlike the modern
@@ -103,7 +126,8 @@ body {
     Menlo,
     Consolas,
     monospace;
-  background: var(--bg);
+  /* The page is the chrome now — var(--bg) belongs to the terminal box alone. */
+  background: var(--chrome);
   color: var(--text);
 }
 
@@ -119,26 +143,17 @@ body {
 .app__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* The actions are all that is left in the bar — no title, no status — so they
+     sit at the left rather than being spread against anything. */
+  justify-content: flex-start;
   gap: 8px;
-  padding: 5px 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.app__title {
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.app__status {
-  margin-top: 1px;
-  margin-left: 4px;
-  font-size: 11px;
-  color: var(--muted);
+  padding: 4px 12px;
+  /* The bar and the surround below it are one continuous light field; the terminal
+     box is what sits on top of it. Being light on every theme is why the contents
+     can't ride var(--text): that is near-white on dark and bright green on
+     terminal, both unreadable here. */
+  background: var(--chrome);
+  color: var(--chrome-ink);
 }
 
 .app__actions {
@@ -147,21 +162,35 @@ body {
   gap: 6px;
 }
 
-.icon-btn {
+/* Text chips on the light bar: white, no outline, softly rounded. The radius is
+   deliberate — the * reset above squares everything by default, so this rule is
+   what opts these three back in. `color: inherit` takes the bar's dark
+   foreground; a button would otherwise use the UA's own colour. */
+.bar-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--text);
+  gap: 6px;
+  /* Sized by its padding rather than a fixed height — a `height` would swallow the
+     vertical padding and leave the chips as tight as before. */
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px; /* radius-ok */
+  background: var(--chrome-field);
+  color: inherit;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.icon-btn svg {
-  width: 14px;
-  height: 14px;
+/* Thin-stroke outline glyphs, matched to the label's size rather than dominating it.
+   The 1.5 stroke on a 24 viewBox stays around a pixel here, which is what gives them
+   the light ChatGPT weight. currentColor takes the bar's foreground. */
+.bar-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 
@@ -169,13 +198,18 @@ body {
 .term {
   flex: 1;
   min-height: 0; /* allow the pane to shrink so it scrolls and the input stays pinned */
-  margin: 0;
+  /* Inset into the chrome, so the surround shows on all four sides. The bottom
+     margin carries the iOS safe-area inset — the whole box has to clear the home
+     indicator and the display's rounded corners, not just the text inside it, or a
+     rounded corner of the box would sit under them. env() is 0 on hardware without
+     an inset, so this is self-scoping. */
+  margin: 4px 12px;
+  margin-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   padding: 12px;
-  /* The pane still fills the screen — only its content stops short of the bottom.
-     On iOS the display's rounded corners and the home indicator eat into that
-     strip, which was clipping the last line of output. env() is 0 on hardware
-     without an inset, so this is self-scoping: no offset where none is needed. */
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  /* No outline — the box reads against the chrome by its fill alone. */
+  border: none;
+  border-radius: 8px; /* radius-ok */
+  background: var(--bg);
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -192,6 +226,15 @@ body {
   color: var(--text);
 }
 
+/* With the keyboard up there is no home indicator to clear — it is behind the keys —
+   so the whole bottom margin goes, safe-area inset and all, and the box sits flush
+   on the keys. `.app` is already sized to the visual viewport, so its bottom edge is
+   exactly the top of the keyboard. webui.ts sets the class; CSS cannot see a
+   keyboard on its own. */
+.keyboard-open .term {
+  margin-bottom: 0;
+}
+
 /* Invisible input that captures keyboard input; focused by tapping the terminal. */
 .hidden-input {
   position: fixed;
@@ -204,7 +247,7 @@ body {
 }
 
 .field__input::placeholder {
-  color: var(--placeholder);
+  color: var(--chrome-muted);
 }
 
 /* ---- modals (login / settings) ---- */
@@ -214,8 +257,17 @@ body {
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
+  /* See-through, and no dimming scrim either: the header and the terminal stay
+     visible and undimmed behind the box. The layer still spans the screen, so it goes
+     on catching taps outside the box — transparent, not absent. */
+  background: transparent;
+  color: var(--chrome-ink);
   padding: 20px;
+  /* Face and size both match the header bar, and both are set once here: everything
+     in the modal inherits them, the controls included, via the reset above. The
+     per-element sizes this used to carry (11–15px) are gone. */
+  font-family: var(--font-ui);
+  font-size: 14px;
 }
 
 .modal--open {
@@ -226,9 +278,10 @@ body {
 
 .modal__box {
   width: 100%;
-  max-width: 380px;
-  background: var(--panel);
+  max-width: 340px;
+  background: var(--chrome);
   border: none;
+  border-radius: 8px; /* radius-ok — same curve as the header chips */
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -237,9 +290,18 @@ body {
   -webkit-user-select: none;
 }
 
+/* Only the modal that ends in a version line — a footnote can sit closer to the edge
+   than the form above it. Profile, which ends in buttons, keeps the even 16px. */
+.modal__box:has(.modal__version) {
+  padding-bottom: 8px;
+}
+
+/* An <h2>: both the size and the weight have to be stated, or it takes the UA's
+   1.5em bold and comes out at 21px. A step above the body text, not a heavier one. */
 .modal__title {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 400;
 }
 
 .modal__view {
@@ -261,17 +323,16 @@ body {
   pointer-events: none;
 }
 
+/* Field names read as content, not as secondary chrome — black, like the values. */
 .field__label {
   display: block;
-  font-size: 11px;
-  color: var(--muted);
+  color: var(--chrome-ink);
   margin-bottom: 4px;
 }
 
 .field__hint {
   display: block;
-  font-size: 11px;
-  color: var(--muted);
+  color: var(--chrome-muted);
   margin-top: 4px;
 }
 
@@ -279,18 +340,31 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  color: var(--text);
+  color: var(--chrome-ink);
   cursor: pointer;
 }
 
+/* One appearance for every theme — the modal is always the light chrome, so the
+   three per-theme variants this used to need are gone. A white fill and no outline,
+   matching the inputs, with a dark tick. */
 .checkbox input {
+  appearance: none;
+  -webkit-appearance: none;
   width: 16px;
   height: 16px;
   margin: 0;
+  border: none;
+  border-radius: 6px; /* radius-ok */
+  background: var(--chrome-field);
+  flex-shrink: 0;
   cursor: pointer;
-  /* Gray check fill instead of the OS default (blue). */
-  accent-color: var(--muted);
+}
+
+.checkbox input:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8l3.5 3.5L13 4'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 .switch {
@@ -299,8 +373,7 @@ body {
   justify-content: space-between;
   gap: 10px;
   height: 36px;
-  font-size: 13px;
-  color: var(--text);
+  color: var(--chrome-ink);
   cursor: pointer;
   user-select: none;
 }
@@ -323,12 +396,13 @@ body {
   position: relative;
   width: 36px;
   height: 20px;
-  background: var(--track);
+  border-radius: 10px; /* radius-ok — half the height, so the track is a full pill */
+  background: var(--chrome-track);
   transition: background 0.2s;
 }
 
 .switch input:checked + .switch__track {
-  background: var(--accent);
+  background: var(--chrome-ink);
 }
 
 .switch__thumb {
@@ -337,7 +411,8 @@ body {
   left: 2px;
   width: 16px;
   height: 16px;
-  background: #fff;
+  border-radius: 50%; /* radius-ok — round knob, to match the pill track */
+  background: var(--chrome-field);
   transition: transform 0.2s;
 }
 
@@ -352,15 +427,18 @@ body {
   width: 100%;
   height: 36px;
   padding: 0 10px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  font-size: 13px;
+  border: none;
+  border-radius: 8px; /* radius-ok — also reaches the dropdown trigger, which reuses this */
+  background: var(--chrome-field);
+  color: var(--chrome-ink);
 }
 
+/* No border to recolour on focus, so the ring is a shadow instead — inset, so it
+   costs no layout and the field doesn't shift. Losing focus entirely would be worse
+   than the outline the field no longer has. */
 .field__input:focus {
   outline: none;
-  border-color: var(--focus);
+  box-shadow: inset 0 0 0 2px var(--chrome-ink);
 }
 
 /* Custom dropdown (replaces native <select>, whose option menu the webview
@@ -381,84 +459,9 @@ body {
   background-position: right 14px center;
 }
 
-:root[data-theme="terminal"] .select__button {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%232a8a3a' stroke-width='1.5'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
-}
-
-:root[data-theme="terminal"] .switch input:checked + .switch__track {
-  background: var(--muted);
-}
-
-:root[data-theme="dark"] .switch input:checked + .switch__track,
-:root:not([data-theme]) .switch input:checked + .switch__track {
-  background: var(--muted);
-}
-
-:root[data-theme="terminal"] .switch__thumb {
-  background: var(--btn);
-}
-
-/* Terminal checkbox: custom appearance so the tick is --muted green, not white. */
-:root[data-theme="terminal"] .checkbox input {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--border);
-  background: transparent;
-  position: relative;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-:root[data-theme="terminal"] .checkbox input:checked {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%232a8a3a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8l3.5 3.5L13 4'/%3E%3C/svg%3E");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-/* Light checkbox: custom appearance so the tick uses --muted color. */
-:root[data-theme="light"] .checkbox input {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--border);
-  background: transparent;
-  position: relative;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-:root[data-theme="light"] .checkbox input:checked {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8l3.5 3.5L13 4'/%3E%3C/svg%3E");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-/* Dark checkbox: custom appearance so the tick uses --muted color. */
-:root[data-theme="dark"] .checkbox input,
-:root:not([data-theme]) .checkbox input {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--border);
-  background: transparent;
-  position: relative;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-:root[data-theme="dark"] .checkbox input:checked,
-:root:not([data-theme]) .checkbox input:checked {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238b8f9a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8l3.5 3.5L13 4'/%3E%3C/svg%3E");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-}
+/* The per-theme checkbox, switch and chevron overrides that used to live here are
+   gone: the modal is the same light chrome on every theme, so there is nothing left
+   for them to vary against. The single rules above cover all three. */
 
 .select__label {
   flex: 1;
@@ -467,8 +470,10 @@ body {
   white-space: nowrap;
 }
 
+/* Nothing on the trigger while the menu is open — the open menu below it is the
+   state, and a ring on top of that just reads as an outline. */
 .select--open .select__button {
-  border-color: var(--focus);
+  box-shadow: none;
 }
 
 .select__menu {
@@ -480,8 +485,9 @@ body {
   right: 0;
   top: 100%;
   z-index: 10;
-  background: var(--bg);
-  border: 1px solid var(--border);
+  background: var(--chrome-field);
+  border: none;
+  border-radius: 8px; /* radius-ok */
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   max-height: 280px;
   overflow-y: auto;
@@ -509,20 +515,29 @@ body {
   box-sizing: border-box;
   height: 32px;
   padding: 0 10px;
-  font-size: 13px;
+}
+
+/* It takes focus as soon as the menu opens, so the .field__input focus ring would
+   fire every time — an outline nobody asked for on a box that is already obviously
+   the one being typed into. The other text fields keep theirs. */
+.select__search:focus {
+  box-shadow: none;
 }
 
 .select__option {
   padding: 6px 10px;
-  border: 1px solid transparent; /* reserved so hover doesn't shift layout */
-  font-size: 13px;
-  color: var(--text);
+  border: none;
+  border-radius: 8px; /* radius-ok — so the highlight follows the menu's corners */
+  color: var(--chrome-ink);
   cursor: pointer;
 }
 
+/* The selected value, and whatever the pointer is over: a fill in the chrome tone
+   against the menu's white, rather than an outline. Nothing reserves space now that
+   there is no border, so there is no layout shift to guard against either. */
 .select__option:hover,
 .select__option--active {
-  border-color: var(--focus);
+  background: var(--chrome);
 }
 
 .modal__actions {
@@ -537,19 +552,22 @@ body {
   text-align: center;
 }
 
+/* Like the inputs and the header chips: a white fill, no outline. Theme-independent,
+   because the modal it sits on is. */
 .btn {
   padding: 6px 12px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
-  font-size: 12px;
+  border-radius: 8px; /* radius-ok — same curve as the header chips and the modal */
+  border: none;
+  background: var(--chrome-field);
+  color: var(--chrome-ink);
   cursor: pointer;
 }
 
+/* Inverted rather than themed — var(--btn) would be black, grey or bright green
+   depending on the theme, and the modal is meant to look the same in all three. */
 .btn--primary {
-  background: var(--btn);
-  border-color: var(--border);
-  color: var(--btn-text);
+  background: var(--chrome-ink);
+  color: var(--chrome-field);
   font-weight: 600;
 }
 
@@ -557,16 +575,14 @@ body {
   padding: 0;
   border: none;
   background: none;
-  color: var(--muted);
-  font-size: 11px;
+  color: var(--chrome-muted);
   cursor: pointer;
   text-decoration: underline;
   margin-right: auto;
 }
 
 .modal__saved {
-  font-size: 13px;
-  color: var(--focus);
+  color: var(--chrome-ink);
   margin-right: auto;
   align-self: center;
   opacity: 0;
@@ -577,10 +593,14 @@ body {
   opacity: 1;
 }
 
+/* The one thing in the modal that isn't at the shared 14px — it's a footnote, not
+   part of the form. The margin adds to the box's 10px flex gap to set it further
+   apart from the buttons above. */
 .modal__version {
+  margin-top: 8px;
   text-align: center;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--chrome-ink);
 }
 
 /* Block cursor appended to the terminal output when idle. Static by default;

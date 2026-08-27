@@ -77,12 +77,11 @@ async function main() {
     renderAll();
   }
 
+  // Status lines are a glasses affordance — the lens has no other way to say the mic
+  // is open or a reply is coming. The web UI shows its own output and never displays
+  // them, so this only reaches display.render (see renderAll).
   function setStatus(text: string) {
     statusText = text;
-    // The idle hint is a glasses affordance — it tells you the touch bar is live.
-    // The web UI has its own input, so it shows nothing rather than a hint for a
-    // gesture that isn't available there.
-    ui?.setStatus(text === IDLE_STATUS ? "" : text);
     renderAll();
   }
 
@@ -350,9 +349,6 @@ async function main() {
       if (!generating) setStatus(idleStatus());
     },
   });
-
-  // Callbacks above may have set the status before `ui` existed — sync it now.
-  ui.setStatus(statusText);
 
   // Even app bridge events
   bridge.onEvenHubEvent((event) => {
