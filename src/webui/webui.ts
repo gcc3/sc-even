@@ -12,7 +12,7 @@ import "./styles.css";
 import type { EvenAppBridge } from "@evenrealities/even_hub_sdk";
 import { loadSettings } from "../utils/setting";
 import { GEAR_SVG, USER_SVG, NEW_CHAT_SVG } from "../assets/icons";
-import { setLocale, localeFromLangCode } from "../i18n";
+import { t, setLocale, localeFromLangCode } from "../i18n";
 import { userModalHTML, createUserModal } from "./user";
 import { settingsModalHTML, createSettingsModal, applyTheme } from "./settings";
 
@@ -66,9 +66,9 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     <div class="app">
       <header class="app__header">
         <div class="app__actions">
-          <button class="bar-btn" data-refresh>${NEW_CHAT_SVG}New chat</button>
-          <button class="bar-btn" data-open-login>${USER_SVG}Profile</button>
-          <button class="bar-btn" data-open-settings>${GEAR_SVG}Settings</button>
+          <button class="bar-btn" data-refresh>${NEW_CHAT_SVG}<span data-i18n-new-chat>${t("btnNewChat")}</span></button>
+          <button class="bar-btn" data-open-login>${USER_SVG}<span data-i18n-profile>${t("btnProfile")}</span></button>
+          <button class="bar-btn" data-open-settings>${GEAR_SVG}<span data-i18n-settings>${t("settingsTitle")}</span></button>
         </div>
       </header>
       <pre class="term" data-term></pre>
@@ -97,6 +97,9 @@ export async function createWebUI(bridge: EvenAppBridge, options: WebUIOptions):
     onCursorBlinkChange: options.onCursorBlinkChange,
     onTranscriptionChange: options.onTranscriptionChange,
     onApplyTranslations: () => {
+      root.querySelector("[data-i18n-new-chat]")!.textContent = t("btnNewChat");
+      root.querySelector("[data-i18n-profile]")!.textContent = t("btnProfile");
+      root.querySelector("[data-i18n-settings]")!.textContent = t("settingsTitle");
       userModal.applyTranslations();
       settingsModal.applyTranslations();
     },

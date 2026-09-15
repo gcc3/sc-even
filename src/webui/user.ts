@@ -130,6 +130,7 @@ export function createUserModal(
   return {
     open,
     applyTranslations() {
+      modalTitle.textContent = registerView.style.display === "none" ? t("loginTitle") : t("registerTitle");
       loginModal.querySelector("[data-i18n-username]")!.textContent = t("fieldUsername");
       loginModal.querySelector("[data-i18n-password]")!.textContent = t("fieldPassword");
       loginModal.querySelector("[data-i18n-save-creds]")!.textContent = t("saveCredentials");

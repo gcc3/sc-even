@@ -18,8 +18,18 @@ export function parseLocale(value: string): Locale {
 
 let current: Translations = TRANSLATIONS.en;
 
+// BCP 47 tag for the <html lang> attribute. Matters for CJK: the same Han
+// codepoint renders with different glyphs in zh-Hans / zh-Hant / ja fonts, and
+// the browser picks by this attribute.
+function htmlLang(locale: Locale): string {
+  if (locale === "zh") return "zh-Hans";
+  if (locale === "zt") return "zh-Hant";
+  return locale;
+}
+
 export function setLocale(locale: Locale): void {
   current = TRANSLATIONS[locale];
+  if (typeof document !== "undefined") document.documentElement.lang = htmlLang(locale);
 }
 
 export function t(key: keyof Translations): string {
@@ -28,7 +38,7 @@ export function t(key: keyof Translations): string {
 
 export function getLanguages(): Array<{ value: string; label: string }> {
   return [
-    { value: "", label: "Auto (system)" },
+    { value: "", label: t("langAutoSystem") },
     { value: "ar-EG", label: "العربية (مصر)" },
     { value: "ar-IQ", label: "العربية (العراق)" },
     { value: "ar-MA", label: "العربية (المغرب)" },

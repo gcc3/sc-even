@@ -45,6 +45,10 @@ export interface Translations {
   themeTerminal: string;
   fieldLanguage: string;
   passwordHint: string;
+  btnNewChat: string;
+  btnProfile: string;
+  langAutoSystem: string;
+  searchPlaceholder: string;
 }
 
 const en: Translations = {
@@ -73,6 +77,10 @@ const en: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Language",
   passwordHint: "* At least 8 characters.",
+  btnNewChat: "New chat",
+  btnProfile: "Profile",
+  langAutoSystem: "Auto (system)",
+  searchPlaceholder: "Search…",
 };
 
 const ja: Translations = {
@@ -101,6 +109,10 @@ const ja: Translations = {
   themeTerminal: "ターミナル",
   fieldLanguage: "言語",
   passwordHint: "* 8文字以上で入力してください。",
+  btnNewChat: "新しいチャット",
+  btnProfile: "プロフィール",
+  langAutoSystem: "自動（システム）",
+  searchPlaceholder: "検索…",
 };
 
 const zh: Translations = {
@@ -129,6 +141,10 @@ const zh: Translations = {
   themeTerminal: "终端",
   fieldLanguage: "语言",
   passwordHint: "* 请输入至少 8 个字符。",
+  btnNewChat: "新对话",
+  btnProfile: "个人资料",
+  langAutoSystem: "自动（系统）",
+  searchPlaceholder: "搜索…",
 };
 
 const zt: Translations = {
@@ -157,6 +173,10 @@ const zt: Translations = {
   themeTerminal: "終端機",
   fieldLanguage: "語言",
   passwordHint: "* 請輸入至少 8 個字元。",
+  btnNewChat: "新對話",
+  btnProfile: "個人資料",
+  langAutoSystem: "自動（系統）",
+  searchPlaceholder: "搜尋…",
 };
 
 const ko: Translations = {
@@ -185,6 +205,10 @@ const ko: Translations = {
   themeTerminal: "터미널",
   fieldLanguage: "언어",
   passwordHint: "* 8자 이상 입력해 주세요.",
+  btnNewChat: "새 대화",
+  btnProfile: "프로필",
+  langAutoSystem: "자동 (시스템)",
+  searchPlaceholder: "검색…",
 };
 
 const ar: Translations = {
@@ -213,6 +237,10 @@ const ar: Translations = {
   themeTerminal: "طرفية",
   fieldLanguage: "اللغة",
   passwordHint: "* 8 أحرف على الأقل.",
+  btnNewChat: "محادثة جديدة",
+  btnProfile: "الملف الشخصي",
+  langAutoSystem: "تلقائي (النظام)",
+  searchPlaceholder: "بحث…",
 };
 
 const bn: Translations = {
@@ -241,6 +269,10 @@ const bn: Translations = {
   themeTerminal: "টার্মিনাল",
   fieldLanguage: "ভাষা",
   passwordHint: "* কমপক্ষে ৮টি অক্ষর।",
+  btnNewChat: "নতুন চ্যাট",
+  btnProfile: "প্রোফাইল",
+  langAutoSystem: "স্বয়ংক্রিয় (সিস্টেম)",
+  searchPlaceholder: "খুঁজুন…",
 };
 
 const de: Translations = {
@@ -269,6 +301,10 @@ const de: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Sprache",
   passwordHint: "* Mindestens 8 Zeichen.",
+  btnNewChat: "Neuer Chat",
+  btnProfile: "Profil",
+  langAutoSystem: "Automatisch (System)",
+  searchPlaceholder: "Suchen…",
 };
 
 const es: Translations = {
@@ -297,6 +333,10 @@ const es: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Idioma",
   passwordHint: "* Al menos 8 caracteres.",
+  btnNewChat: "Nuevo chat",
+  btnProfile: "Perfil",
+  langAutoSystem: "Automático (sistema)",
+  searchPlaceholder: "Buscar…",
 };
 
 const fr: Translations = {
@@ -325,6 +365,10 @@ const fr: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Langue",
   passwordHint: "* Au moins 8 caractères.",
+  btnNewChat: "Nouvelle discussion",
+  btnProfile: "Profil",
+  langAutoSystem: "Automatique (système)",
+  searchPlaceholder: "Rechercher…",
 };
 
 const hi: Translations = {
@@ -353,6 +397,10 @@ const hi: Translations = {
   themeTerminal: "टर्मिनल",
   fieldLanguage: "भाषा",
   passwordHint: "* कम से कम 8 अक्षर।",
+  btnNewChat: "नई चैट",
+  btnProfile: "प्रोफ़ाइल",
+  langAutoSystem: "स्वचालित (सिस्टम)",
+  searchPlaceholder: "खोजें…",
 };
 
 const id: Translations = {
@@ -381,6 +429,10 @@ const id: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Bahasa",
   passwordHint: "* Minimal 8 karakter.",
+  btnNewChat: "Obrolan baru",
+  btnProfile: "Profil",
+  langAutoSystem: "Otomatis (sistem)",
+  searchPlaceholder: "Cari…",
 };
 
 const it: Translations = {
@@ -409,6 +461,10 @@ const it: Translations = {
   themeTerminal: "Terminale",
   fieldLanguage: "Lingua",
   passwordHint: "* Almeno 8 caratteri.",
+  btnNewChat: "Nuova chat",
+  btnProfile: "Profilo",
+  langAutoSystem: "Automatico (sistema)",
+  searchPlaceholder: "Cerca…",
 };
 
 const nl: Translations = {
@@ -437,6 +493,10 @@ const nl: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Taal",
   passwordHint: "* Minimaal 8 tekens.",
+  btnNewChat: "Nieuwe chat",
+  btnProfile: "Profiel",
+  langAutoSystem: "Automatisch (systeem)",
+  searchPlaceholder: "Zoeken…",
 };
 
 const pl: Translations = {
@@ -465,6 +525,10 @@ const pl: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Język",
   passwordHint: "* Co najmniej 8 znaków.",
+  btnNewChat: "Nowy czat",
+  btnProfile: "Profil",
+  langAutoSystem: "Automatycznie (system)",
+  searchPlaceholder: "Szukaj…",
 };
 
 const pt: Translations = {
@@ -493,6 +557,10 @@ const pt: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Idioma",
   passwordHint: "* Pelo menos 8 caracteres.",
+  btnNewChat: "Novo chat",
+  btnProfile: "Perfil",
+  langAutoSystem: "Automático (sistema)",
+  searchPlaceholder: "Pesquisar…",
 };
 
 const ru: Translations = {
@@ -521,6 +589,10 @@ const ru: Translations = {
   themeTerminal: "Терминал",
   fieldLanguage: "Язык",
   passwordHint: "* Не менее 8 символов.",
+  btnNewChat: "Новый чат",
+  btnProfile: "Профиль",
+  langAutoSystem: "Авто (система)",
+  searchPlaceholder: "Поиск…",
 };
 
 const sv: Translations = {
@@ -549,6 +621,10 @@ const sv: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Språk",
   passwordHint: "* Minst 8 tecken.",
+  btnNewChat: "Ny chatt",
+  btnProfile: "Profil",
+  langAutoSystem: "Automatiskt (system)",
+  searchPlaceholder: "Sök…",
 };
 
 const tr: Translations = {
@@ -577,6 +653,10 @@ const tr: Translations = {
   themeTerminal: "Terminal",
   fieldLanguage: "Dil",
   passwordHint: "* En az 8 karakter.",
+  btnNewChat: "Yeni sohbet",
+  btnProfile: "Profil",
+  langAutoSystem: "Otomatik (sistem)",
+  searchPlaceholder: "Ara…",
 };
 
 export const TRANSLATIONS: Record<Locale, Translations> = {
