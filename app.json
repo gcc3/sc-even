@@ -17,5 +17,5 @@
       "desc": "This app needs the glasses microphone to capture speech for voice transcription."
     }
   ],
-  "supported_languages": ["en"]
+  "supported_languages": ["en", "ja", "zh", "fr", "es", "de"]
 }
