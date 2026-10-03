@@ -27,7 +27,7 @@ else
 fi
 
 echo "==> Making helper scripts executable"
-chmod +x start.sh stop.sh restart.sh develop.sh setup.sh serve.sh 2>/dev/null || true
+chmod +x start.sh stop.sh restart.sh develop.sh setup.sh serve.sh bump.sh 2>/dev/null || true
 
 echo "==> Checking evenhub CLI (used by develop.sh for the QR code)"
 if command -v evenhub >/dev/null 2>&1; then

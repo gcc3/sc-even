@@ -1,7 +1,7 @@
 {
   "name": "simple-ai-even",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.1",
   "license": "Simple AI License",
   "type": "module",
   "packageManager": "pnpm@11.22.0",
@@ -12,7 +12,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "version": "node -e 'const fs = require(\"fs\"); const { version } = require(\"./package.json\"); fs.writeFileSync(\"app.json\", fs.readFileSync(\"app.json\", \"utf8\").replace(/\"version\": \"[^\"]*\"/, `\"version\": \"${version}\"`))' && git add app.json"
   },
   "devDependencies": {
     "typescript": "~6.0.2",

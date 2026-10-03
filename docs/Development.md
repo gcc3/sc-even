@@ -58,7 +58,10 @@ For PM2 across reboots: `pm2 save && pm2 startup`. Logs are `pm2 logs sc-bridge`
 Release
 -------
 
-1. Bump `version` in `app.json`.
+1. `./bump.sh` — `patch` by default, or `minor`, `major`, `x.y.z`. It runs `npm version`, whose
+   `version` script copies the new version into `app.json`, and commits `package.json`,
+   `package-lock.json` and `app.json` as `x.y.z` with a `vx.y.z` tag. `package.sh` refuses to
+   run while `app.json` and `package.json` carry different versions.
 2. `./login.sh` (once — or `./login.sh you@example.com`) to authenticate with the Even Hub.
 3. `./package.sh` — runs `npm run build`, then `evenhub pack` into
    `com.gcc3.g2sc-<version>.ehpk`.
